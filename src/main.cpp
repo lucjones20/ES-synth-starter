@@ -113,6 +113,7 @@ void sampleISR(){
 }
 
 volatile uint8_t keyArray[7];
+SemaphoreHandle_t keyArrayMutex;
 const char* key;
 
 void scanKeysTask(void * pvParamters){
@@ -127,7 +128,9 @@ void scanKeysTask(void * pvParamters){
         for(int i = 0; i < range; i++){
             setRow(uint8_t(i));
             delayMicroseconds(5);
+            xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
             keyArray[i] = readCols();
+            xSemaphoreGive(keyArrayMutex);
         }
         currentStepSize = 0;
         for(int i = 0; i < range; i++){
@@ -197,6 +200,7 @@ void setup() {
     Serial.println("Hello World");
 
 
+    keyArrayMutex = xSemaphoreCreateMutex();
     TIM_TypeDef *Instance = TIM1;
     HardwareTimer *sampleTimer = new HardwareTimer(Instance);
 
