@@ -146,9 +146,19 @@ uint8_t readCols(){
 volatile uint8_t keyArray[7];
 long ctime = 0;
 void scanKeysTask(void * pvParameters) {
-    const TickType_t xFrequency = 50/portTICK_PERIOD_MS;
+    const TickType_t xFrequency = 10/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     while(1){
+        for(int i = 0; i < 8; i++){
+            // Only 0-2 for now as thats where keys are - will be expanded to 0 - 7
+            // Delay for parasitic capacitance
+            setRow(i);
+            delayMicroseconds(3);
+            xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
+
+            keyArray[i] = readCols();
+            xSemaphoreGive(keyArrayMutex);
+        }
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
         uint32_t stepsize_local;
         std::string keyPressed_local;
@@ -189,18 +199,6 @@ void displayUpdateTask(void * pvParameters){
         static uint32_t next = millis();
         static uint32_t count = 0;
 
-        for(int i = 0; i < 8; i++){
-            // Only 0-2 for now as thats where keys are - will be expanded to 0 - 7
-            // Delay for parasitic capacitance
-            setRow(i);
-            delayMicroseconds(3);
-            xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
-
-            keyArray[i] = readCols();
-            xSemaphoreGive(keyArrayMutex);
-        }
-
-        
 
         next += interval;
 
@@ -216,7 +214,9 @@ void displayUpdateTask(void * pvParameters){
         
         u8g2.setCursor(2,30);
         u8g2.drawStr(2,30,keyPressed.c_str());
-
+        // u8g2.drawStr(10,30, "           VOLUME" + str(((Knob *) pvParameters)->getState()));
+        u8g2.setCursor(30,30);
+        u8g2.print(((Knob *) pvParameters)->getState());
         u8g2.sendBuffer();          // transfer internal memory to the display
 
         //Toggle LED
@@ -278,7 +278,7 @@ void setup() {
     displayUpdateTask,		/* Function that implements the task */
     "displayUpdate",		/* Text name for the task */
     256,      		/* Stack size in words, not bytes */
-    NULL,			/* Parameter passed into the task */
+    volumeKnob,			/* Parameter passed into the task */
     1,			/* Task priority */
     &displayUpdateHandle );	/* Pointer to store the task handle */
 
