@@ -5,7 +5,9 @@
 #include <iostream>
 #include <atomic>
 #include "knob.cpp"
-
+#include <vector>
+#include <ES_CAN.h>
+#include <cmath>
 
 
 //Constants
@@ -40,20 +42,24 @@
     const int HKOE_BIT = 6;
 
 
+
+
 //Mutex
 SemaphoreHandle_t keyArrayMutex;
+SemaphoreHandle_t CAN_TX_Semaphore;
 Knob* volumeKnob;
 //Step sizes
 volatile uint32_t currentStepSize;
 std::string keyPressed;
-
+uint8_t TX_Message[8];
 struct Note {
     std::string name;
     uint32_t stepSize;
 };
 
-
-
+int octaveNumber;
+QueueHandle_t msgOutQ;
+QueueHandle_t msgInQ;
 // const Note stepSizes[12] = {
 Note stepSizes[12] = {
     // C
@@ -98,11 +104,69 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
     delayMicroseconds(2);
     digitalWrite(REN_PIN,LOW);
 }
+std::pair<bool,bool> convertUint8ToPairs(uint8_t a, uint8_t b)
+{
+  std::pair<bool,bool> ret;
+  if(a == 0b0)
+    ret.first = true;
+  else
+    ret.first = false;
+  if(b == 0b0)
+    ret.second = true;
+  else
+    ret.second = false;
+  return ret;
+}
+void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
+{
+  std::vector<std::pair<bool,bool>> keyPairs;
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys & 0b1, *prevKeys & 0b01)); //Note 0
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 1 & 0b1, *prevKeys >> 1 & 0b1)); //Note 1
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 2 & 0b1, *prevKeys >> 2 & 0b1)); //Note 2
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 3 & 0b1, *prevKeys >> 3 & 0b1)); //Note 3
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) & 0b1, *(prevKeys + 1) & 0b01)); //Note 4
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 1 & 0b1, *(prevKeys + 1) >> 1 & 0b1)); //Note 5
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 2 & 0b1, *(prevKeys + 1) >> 2 & 0b1)); //Note 6
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 3 & 0b1, *(prevKeys + 1) >> 3 & 0b1)); //Note 7
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) & 0b1, *(prevKeys + 2) & 0b01)); //Note 8
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) >> 1 & 0b1, *(prevKeys + 2) >> 1 & 0b1)); //Note 9
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) >> 2 & 0b1, *(prevKeys + 2) >> 2 & 0b1)); //Note 10
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) >> 3 & 0b1, *(prevKeys + 2) >> 3 & 0b1)); //Note 11
+  for(int i = 0; i < 12; i++)
+  {
+    if(keyPairs[i].first == false && keyPairs[i].second == true)
+    {
+      TX_Message[0] = 'R';
+      TX_Message[2] = uint8_t(i);
+      xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+    }
+    else if(keyPairs[i].first == true && keyPairs[i].second == false)
+    {
+      TX_Message[0] = 'P';
+      TX_Message[2] = uint8_t(i);
+      xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+    }
+  }
+}
+
+void generateSineWave(uint32_t phaseAcc, double duration, double samplingRate = 22000)
+{
+    
+    int numSamples = (int)(duration * samplingRate);
+    for (int i = 0; i < numSamples; i++)
+    {
+        double angle = 2.0 * phaseAcc *  3.14159265358979323846  * ((double)i / samplingRate);
+        double sample = sin(angle);
+        // Output the sample to the audio device or write to a file, etc.
+        std::cout << sample << std::endl;
+        
+    }
+}
 
 void sampleISR() {
     static uint32_t phaseAcc = 0;
     phaseAcc += currentStepSize;
-
+    // generateSineWave(phaseAcc, duration);
     int32_t Vout = (phaseAcc >> 24) - 128;
     Vout = Vout >> (8 - volumeKnob->getCounter());
     analogWrite(OUTR_PIN, Vout + 128);
@@ -114,7 +178,7 @@ void setRow(uint8_t rowIdx){
 
 	digitalWrite(RA0_PIN, LOW);
 	digitalWrite(RA1_PIN, LOW);
-  digitalWrite(RA2_PIN, LOW);
+    digitalWrite(RA2_PIN, LOW);
 
 	
 	if(rowIdx & 0b1){
@@ -144,20 +208,20 @@ uint8_t readCols(){
 }
 
 volatile uint8_t keyArray[7];
-long ctime = 0;
 void scanKeysTask(void * pvParameters) {
     const TickType_t xFrequency = 50/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
+    uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
     while(1){
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
         uint32_t stepsize_local;
-        std::string keyPressed_local;
+        std::string keyPressed_local = "";
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         for(int i = 0; i < 3; i++){
             for(int j = 0; j < 4; j++){
                 if(!(((keyArray[i]) >> j) & 1)){
                     // std::cout<< ((keyArray[i]) >> j);
-                    keyPressed_local = stepSizes[j + 4*i].name; 
+                    keyPressed_local += stepSizes[j + 4*i].name; 
                     stepsize_local = stepSizes[j+4*i].stepSize;
                 }
             }
@@ -168,12 +232,14 @@ void scanKeysTask(void * pvParameters) {
             keyPressed_local = "";
             stepsize_local = 0;
         }
+        generateMsg(&(keyArray[0]), &prevKeyArray[0]);
         volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
-
+        prevKeyArray[0] = keyArray[0];
+        prevKeyArray[1] = keyArray[1];
+        prevKeyArray[2] = keyArray[2];
         xSemaphoreGive(keyArrayMutex);
 
         __atomic_store_n(&currentStepSize, stepsize_local, __ATOMIC_RELAXED);
-        keyPressed = keyPressed_local;
     }
 }
 
@@ -207,7 +273,7 @@ void displayUpdateTask(void * pvParameters){
         //Update display
         u8g2.clearBuffer();                 // clear the internal memory
         u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-        u8g2.drawStr(2,10,"Helllo World!");    // write something to the internal memory
+        u8g2.drawStr(2,10,"Helllo Daddy!");    // write something to the internal memory
 
         u8g2.setCursor(2,20);
         for(int i = 0; i < 3; i++){
@@ -224,10 +290,48 @@ void displayUpdateTask(void * pvParameters){
 
     }
 }
-
+void CAN_TX_Task (void * pvParameters) {
+	uint8_t msgOut[8];
+	while (1) {
+	xQueueReceive(msgOutQ, msgOut, portMAX_DELAY);
+		xSemaphoreTake(CAN_TX_Semaphore, portMAX_DELAY);
+		CAN_TX(0x123, msgOut);
+	}
+}
+void CAN_RX_Task(void* pvParameters){
+  uint8_t msgIn[8];
+  while(1)
+  {
+    xQueueReceive(msgInQ, msgIn, portMAX_DELAY);
+    std::string local = "";
+    if(msgIn[0] == 'P')
+      local+= 'P';
+    else
+      local += 'R';
+    local += ", Note" + std::to_string(msgIn[2]);
+    keyPressed = local;
+  }
+}
+void CAN_TX_ISR (void) {
+	xSemaphoreGiveFromISR(CAN_TX_Semaphore, NULL);
+}
+void CAN_RX_ISR (void) {
+	uint8_t RX_Message_ISR[8];
+	uint32_t ID;
+	CAN_RX(ID, RX_Message_ISR);
+	xQueueSendFromISR(msgInQ, RX_Message_ISR, NULL);
+}
 void setup() {
     // put your setup code here, to run once:
+    CAN_Init(true);
+    setCANFilter(0x123,0x7ff);
+    CAN_Start();
     keyArrayMutex = xSemaphoreCreateMutex();
+    msgOutQ = xQueueCreate(36,8);
+    msgInQ = xQueueCreate(36,8);
+    CAN_TX_Semaphore = xSemaphoreCreateCounting(3,3);
+    CAN_RegisterTX_ISR(CAN_TX_ISR);
+    CAN_RegisterRX_ISR(CAN_RX_ISR);
     volumeKnob = new Knob(0, 8, 8);
     //Set pin directions
     pinMode(RA0_PIN, OUTPUT);
@@ -281,7 +385,22 @@ void setup() {
     NULL,			/* Parameter passed into the task */
     1,			/* Task priority */
     &displayUpdateHandle );	/* Pointer to store the task handle */
-
+    TaskHandle_t CAN_TXTask = NULL;
+    xTaskCreate(
+      CAN_TX_Task,
+      "CAN_Transmit",
+      64,
+      NULL,
+      5,
+      &CAN_TXTask);
+    TaskHandle_t CAN_RXTask = NULL;
+    xTaskCreate(
+      CAN_RX_Task,
+      "CAN_Recieve",
+      64,
+      NULL,
+      5,
+      &CAN_RXTask);
     vTaskStartScheduler();
 }
 

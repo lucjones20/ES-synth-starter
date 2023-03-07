@@ -31,7 +31,7 @@ public:
   {
       switch (prevBA)
       {
-      case 0b0:
+      case 0b00:
         switch (currentBA)
         {
           case 0b01:
@@ -44,7 +44,7 @@ public:
       case 0b01:
         switch (currentBA)
         {
-          case 0b0:
+          case 0b00:
             setCounter(-1);
             break;
           default:
