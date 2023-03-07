@@ -168,12 +168,8 @@ void scanKeysTask(void * pvParameters) {
             keyPressed_local = "";
             stepsize_local = 0;
         }
-        volumeKnob->advanceState(((keyArray[3] & 0b1000) >> 3) + ((keyArray[3] & 0b0100) >> 1));
-        if(millis() - ctime > 200)
-        {
-          ctime = millis();
-          Serial.println(((keyArray[3] & 0b1000) >> 3) + ((keyArray[3] & 0b0100) >> 1));
-        }
+        volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
+
         xSemaphoreGive(keyArrayMutex);
 
         __atomic_store_n(&currentStepSize, stepsize_local, __ATOMIC_RELAXED);
