@@ -112,6 +112,58 @@ void sampleISR(){
     analogWrite(OUTR_PIN, Vout + 128);
 }
 
+volatile uint8_t keyArray[7];
+const char* key;
+
+void scanKeysTask(void * pvParamters){
+    const TickType_t xFrequency = 50/portTICK_PERIOD_MS;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    while(1){
+        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+        key = NULL;
+        const int range = 3;
+        // uint8_t keys = readCols();
+
+        for(int i = 0; i < range; i++){
+            setRow(uint8_t(i));
+            delayMicroseconds(5);
+            keyArray[i] = readCols();
+        }
+        currentStepSize = 0;
+        for(int i = 0; i < range; i++){
+            for(int j = 0; j < 4; j++){
+                if(!((keyArray[i] >> (3-j)) & 0b1)){
+                    key = notes[(i*4) + j]; 
+                    __atomic_store_n(&currentStepSize, stepSize[(i*4 + j)], __ATOMIC_RELAXED);
+                    // currentStepSize = stepSize[(i*4 + j)];
+                }
+            }
+        }
+    }
+}
+
+void displayUpdateTask(void * pvParameters){
+
+    const TickType_t xFrequency = 100/portTICK_PERIOD_MS;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    while(1){
+        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+
+        //Update display
+        u8g2.clearBuffer();         // clear the internal memory
+        u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
+        u8g2.drawStr(2,10,"Hello World!");  // write something to the internal memory
+        u8g2.setCursor(2,20);
+        u8g2.print(key);
+        // u8g2.print(keyArray[0],HEX);
+        // u8g2.print(keyArray[1],HEX);
+        // u8g2.print(keyArray[2],HEX);
+        u8g2.sendBuffer();          // transfer internal memory to the display
+
+        //Toggle LED
+        digitalToggle(LED_BUILTIN);
+    }
+}
 
 void setup() {
     // put your setup code here, to run once:
@@ -151,58 +203,29 @@ void setup() {
     sampleTimer->setOverflow(22000, HERTZ_FORMAT);
     sampleTimer->attachInterrupt(sampleISR);
     sampleTimer->resume();
+
+    TaskHandle_t scanKeysHandle = NULL;
+    xTaskCreate(
+        scanKeysTask,		/* Function that implements the task */
+        "scanKeys",		/* Text name for the task */
+        64,      		/* Stack size in words, not bytes */
+        NULL,			/* Parameter passed into the task */
+        1,			/* Task priority */
+        &scanKeysHandle  /* Pointer to store the task handle */
+    );
+
+    TaskHandle_t displayUpdateHandle = NULL;
+    xTaskCreate(
+        displayUpdateTask,		/* Function that implements the task */
+        "scanKeys",		/* Text name for the task */
+        64,      		/* Stack size in words, not bytes */
+        NULL,			/* Parameter passed into the task */
+        2,			/* Task priority */
+        &displayUpdateHandle  /* Pointer to store the task handle */
+    );
+
+    vTaskStartScheduler();
 }
 
-volatile uint8_t keyArray[7];
-const char* key = NULL;
 
-void scanKeysTask(void * pvParamters){
-        while(1){
-            const int range = 3;
-            // uint8_t keys = readCols();
-
-            for(int i = 0; i < range; i++){
-                setRow(uint8_t(i));
-                delayMicroseconds(5);
-                keyArray[i] = readCols();
-            }
-            currentStepSize = 0;
-            for(int i = 0; i < range; i++){
-                for(int j = 0; j < 4; j++){
-                    if(!((keyArray[i] >> (3-j)) & 0b1)){
-                        key = notes[(i*4) + j]; 
-                        __atomic_store_n(&currentStepSize, stepSize[(i*4 + j)], __ATOMIC_RELAXED);
-                        // currentStepSize = stepSize[(i*4 + j)];
-                    }
-                }
-            }
-        }
-}
-
-void loop() {
-    // put your main code here, to run repeatedly:
-    static uint32_t next = millis();
-    static uint32_t count = 0;
-
-
-    if (millis() > next) {
-        next += interval;
-
-        scanKeysTask(NULL);
-
-        //Update display
-        u8g2.clearBuffer();         // clear the internal memory
-        u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-        u8g2.drawStr(2,10,"Hello World!");  // write something to the internal memory
-        u8g2.setCursor(2,20);
-        u8g2.print(key);
-        // u8g2.print(keyArray[0],HEX);
-        // u8g2.print(keyArray[1],HEX);
-        // u8g2.print(keyArray[2],HEX);
-        u8g2.sendBuffer();          // transfer internal memory to the display
-
-        //Toggle LED
-        digitalToggle(LED_BUILTIN);
-
-    }
-}
+void loop() {}
