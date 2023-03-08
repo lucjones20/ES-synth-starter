@@ -43,6 +43,7 @@
 //Mutex
 SemaphoreHandle_t keyArrayMutex;
 Knob* volumeKnob;
+Knob* octaveKnob;
 //Step sizes
 volatile uint32_t currentStepSize;
 std::string keyPressed;
@@ -51,6 +52,11 @@ struct Note {
     std::string name;
     uint32_t stepSize;
 };
+
+typedef struct KnobParameters{
+    Knob* volumeKnob;
+    Knob* octaveKnob;
+} KnobParameters;
 
 
 
@@ -82,7 +88,7 @@ Note stepSizes[12] = {
    {"B", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, 2.0 / 12))}
 };
 
-
+double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
 
 //Display driver object
 U8G2_SSD1305_128X32_NONAME_F_HW_I2C u8g2(U8G2_R0);
@@ -163,12 +169,13 @@ void scanKeysTask(void * pvParameters) {
         uint32_t stepsize_local;
         std::string keyPressed_local;
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
+        octaveKnob->advanceState((keyArray[4] & 0b0001) | (keyArray[4] & 0b0010));
         for(int i = 0; i < 3; i++){
             for(int j = 0; j < 4; j++){
                 if(!(((keyArray[i]) >> j) & 1)){
                     // std::cout<< ((keyArray[i]) >> j);
                     keyPressed_local = stepSizes[j + 4*i].name; 
-                    stepsize_local = stepSizes[j+4*i].stepSize;
+                    stepsize_local = stepSizes[j+4*i].stepSize * octaveFactors[octaveKnob->getCounter()];
                 }
             }
         }
@@ -188,19 +195,13 @@ void scanKeysTask(void * pvParameters) {
 }
 
 void displayUpdateTask(void * pvParameters){
-    
 
     const TickType_t xFrequency = 100/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
     while(1){
+        uint32_t volume= volumeKnob->getCounter();
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
-
-        static uint32_t next = millis();
-        static uint32_t count = 0;
-
-
-        next += interval;
 
         //Update display
         u8g2.clearBuffer();                 // clear the internal memory
@@ -211,13 +212,16 @@ void displayUpdateTask(void * pvParameters){
         for(int i = 0; i < 3; i++){
             u8g2.print(keyArray[i],HEX);
         }
+        u8g2.setCursor(30,20);
+        u8g2.print("         OCTAVE: ");
+        u8g2.print(octaveKnob->getCounter());
         
         u8g2.setCursor(2,30);
         u8g2.drawStr(2,30,keyPressed.c_str());
         // u8g2.drawStr(10,30, "           VOLUME" + str(((Knob *) pvParameters)->getState()));
         u8g2.setCursor(30,30);
         u8g2.print("          VOLUME: ");
-        u8g2.print(((Knob *) pvParameters)->getState());
+        u8g2.print(volume);
         u8g2.sendBuffer();          // transfer internal memory to the display
 
         //Toggle LED
@@ -230,6 +234,7 @@ void setup() {
     // put your setup code here, to run once:
     keyArrayMutex = xSemaphoreCreateMutex();
     volumeKnob = new Knob(0, 8, 8);
+    octaveKnob = new Knob(0,8,4);
     //Set pin directions
     pinMode(RA0_PIN, OUTPUT);
     pinMode(RA1_PIN, OUTPUT);
@@ -279,7 +284,7 @@ void setup() {
     displayUpdateTask,		/* Function that implements the task */
     "displayUpdate",		/* Text name for the task */
     256,      		/* Stack size in words, not bytes */
-    volumeKnob,			/* Parameter passed into the task */
+    NULL,			/* Parameter passed into the task */
     1,			/* Task priority */
     &displayUpdateHandle );	/* Pointer to store the task handle */
 

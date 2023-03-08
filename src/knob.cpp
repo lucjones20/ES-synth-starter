@@ -27,9 +27,6 @@ public:
     state = initCounter;
     prevBA = 0b00;
   }
-  uint32_t getState(){
-    return state;
-  }
   void advanceState(uint8_t currentBA)
   {
       switch (prevBA)
