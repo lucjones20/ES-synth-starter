@@ -5,6 +5,9 @@
 #include <iostream>
 #include <atomic>
 #include "knob.cpp"
+#include <vector>
+#include <ES_CAN.h>
+#include <cmath>
 
 
 
@@ -40,14 +43,16 @@
     const int HKOE_BIT = 6;
 
 
+
+
 //Mutex
 SemaphoreHandle_t keyArrayMutex;
 Knob* volumeKnob;
 Knob* octaveKnob;
 //Step sizes
-volatile uint32_t currentStepSize;
+volatile uint32_t currentStepSize[12];
 std::string keyPressed;
-
+volatile uint8_t TX_Message[8];
 struct Note {
     std::string name;
     uint32_t stepSize;
@@ -104,11 +109,75 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
     delayMicroseconds(2);
     digitalWrite(REN_PIN,LOW);
 }
+void addNodeToMsg(int note, bool press)
+{
+  if(press)
+    TX_Message[0] = 'P';
+  else
+    TX_Message[0] = 'R';
+  TX_Message[1] = uint8_t(octaveNumber);
+  TX_Message[2] = uint8_t(note);
+}
+std::pair<bool,bool> convertUint8ToPairs(uint8_t a, uint8_t b)
+{
+  std::pair<bool,bool> ret;
+  if(a == 0b0)
+    ret.first = true;
+  else
+    ret.first = false;
+  if(b == 0b0)
+    ret.second = true;
+  else
+    ret.second = false;
+}
+void generateMsg(uint8_t* currentKeys, uint8_t* prevKeys)
+{
+  std::vector<std::pair<bool,bool>> keyPairs;
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys & 0b1, *prevKeys & 0b01)); //Note 0
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 1 & 0b1, *prevKeys >> 1 & 0b1)); //Note 1
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 2 & 0b1, *prevKeys >> 2 & 0b1)); //Note 2
+  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 3 & 0b1, *prevKeys >> 3 & 0b1)); //Note 3
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) & 0b1, *(prevKeys + 1) & 0b01)); //Note 4
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 1 & 0b1, *(prevKeys + 1) >> 1 & 0b1)); //Note 1
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 2 & 0b1, *(prevKeys + 1) >> 2 & 0b1)); //Note 2
+  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 3 & 0b1, *(prevKeys + 1) >> 3 & 0b1)); //Note 3
+  
+  
+}
 
+void generateSineWave(uint32_t phaseAcc, double duration, double samplingRate = 22000)
+{
+    // Serial.println("Sine");
+    
+    
+}
+
+volatile uint8_t anyKeyPressed = 0;
+int8_t counter = 0;
+int8_t counter2 = 0;
 void sampleISR() {
     static uint32_t phaseAcc = 0;
-    phaseAcc += currentStepSize;
-
+    counter2++;
+    if(counter2 >= 25) counter2 = 0;
+    if (counter2 == 0){
+        counter++;
+        if(counter >= 12) counter = 0;
+    }
+    
+    if(anyKeyPressed){
+        for(int i = 0; i < 12; i++){
+            if(currentStepSize[counter] !=0){
+                phaseAcc += currentStepSize[counter];
+                delayMicroseconds(10);
+                break;
+            }
+            else{
+                counter++;
+                if(counter >= 12) counter = 0;
+            }
+        }
+    }
+    
     int32_t Vout = (phaseAcc >> 24) - 128;
     Vout = Vout >> (8 - volumeKnob->getCounter());
     analogWrite(OUTR_PIN, Vout + 128);
@@ -120,7 +189,7 @@ void setRow(uint8_t rowIdx){
 
 	digitalWrite(RA0_PIN, LOW);
 	digitalWrite(RA1_PIN, LOW);
-  digitalWrite(RA2_PIN, LOW);
+    digitalWrite(RA2_PIN, LOW);
 
 	
 	if(rowIdx & 0b1){
@@ -149,11 +218,13 @@ uint8_t readCols(){
 	return result;
 }
 
+
+
 volatile uint8_t keyArray[7];
-long ctime = 0;
 void scanKeysTask(void * pvParameters) {
     const TickType_t xFrequency = 50/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
+    uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
     while(1){
         for(int i = 0; i < 8; i++){
             // Only 0-2 for now as thats where keys are - will be expanded to 0 - 7
@@ -166,30 +237,49 @@ void scanKeysTask(void * pvParameters) {
             xSemaphoreGive(keyArrayMutex);
         }
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
-        uint32_t stepsize_local;
-        std::string keyPressed_local;
+        uint32_t stepsize_local[12];
+        std::fill(stepsize_local, stepsize_local + 12, 0);
+        
+        
+        std::string keyPressed_local = "";
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         octaveKnob->advanceState((keyArray[4] & 0b0001) | (keyArray[4] & 0b0010));
         for(int i = 0; i < 3; i++){
             for(int j = 0; j < 4; j++){
                 if(!(((keyArray[i]) >> j) & 1)){
-                    // std::cout<< ((keyArray[i]) >> j);
-                    keyPressed_local = stepSizes[j + 4*i].name; 
-                    stepsize_local = stepSizes[j+4*i].stepSize * octaveFactors[octaveKnob->getCounter()];
+                    anyKeyPressed = 1;
+                    keyPressed_local += stepSizes[j + 4*i].name; 
+                    stepsize_local[j+4*i] = stepSizes[j+4*i].stepSize * octaveFactors[octaveKnob->getCounter()];;
+                }
+                else{
+                    stepsize_local[j+4*i] = 0;
                 }
             }
         }
 
+
         // currentStepSize = (pow(2.0, 32) * 440 / 22000);
         if(keyArray[0] == 0xF && keyArray[1] == 0xF && keyArray[2] == 0xF){
+            anyKeyPressed = 0;
             keyPressed_local = "";
-            stepsize_local = 0;
+            std::fill(stepsize_local, stepsize_local + 12, 0);
         }
         volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
-
+        prevKeyArray[0] = keyArray[0];
+        prevKeyArray[1] = keyArray[1];
+        prevKeyArray[2] = keyArray[2];
         xSemaphoreGive(keyArrayMutex);
+        
+        uint32_t time_micro = micros();
+        for(int i = 0; i < 12; i++){
+            
+            __atomic_store_n(&currentStepSize[i], stepsize_local[i], __ATOMIC_RELAXED);
+            // uint32_t a = currentStepSize[i];
+            // Serial.println(a);
+        }
+        
 
-        __atomic_store_n(&currentStepSize, stepsize_local, __ATOMIC_RELAXED);
+        // __atomic_store_n(&currentStepSize, stepsize_local, __ATOMIC_RELAXED);
         keyPressed = keyPressed_local;
     }
 }
@@ -206,7 +296,7 @@ void displayUpdateTask(void * pvParameters){
         //Update display
         u8g2.clearBuffer();                 // clear the internal memory
         u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-        u8g2.drawStr(2,10,"Helllo World!");    // write something to the internal memory
+        u8g2.drawStr(2,10,"Helllo Daddy!");    // write something to the internal memory
 
         u8g2.setCursor(2,20);
         for(int i = 0; i < 3; i++){
