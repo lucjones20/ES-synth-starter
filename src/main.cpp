@@ -63,34 +63,36 @@ typedef struct KnobParameters{
     Knob* octaveKnob;
 } KnobParameters;
 
-
+int fs = 22000;
+int f = 440;
+double factor = 1.05946309436;
 
 // const Note stepSizes[12] = {
 Note stepSizes[12] = {
     // C
-    {"C", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -9.0 / 12))},
+    {"C", uint32_t(4294967296 * f / factor / factor / factor / factor / factor / factor / factor / factor / factor / fs)},
     // C#
-    {"C#", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -8.0 / 12))},
+    {"C#", uint32_t(4294967296 * f / factor / factor / factor / factor / factor / factor / factor / factor / fs)},
     // D
-    {"D", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -7.0 / 12))},
+    {"D", uint32_t(4294967296 * f / factor / factor / factor / factor / factor / factor / factor / fs)},
     // D#
-    {"D#", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -6.0 / 12))},
+    {"D#", uint32_t(4294967296 * f / factor / factor / factor / factor / factor / factor / fs)},
     // E
-    {"E", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -5.0 / 12))},
+    {"E", uint32_t(4294967296 * f / factor / factor / factor / factor / factor / fs)},
     // F
-    {"F", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -4.0 / 12))},
+    {"F", uint32_t(4294967296 * f / factor / factor / factor / factor / fs)},
     // F#
-    {"F#", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -3.0 / 12))},
+    {"F#", uint32_t(4294967296 * f / factor / factor / factor / fs)},
     // G
-    {"G", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, -2.0 / 12))},
+    {"G", uint32_t(4294967296 * f / factor / factor / fs)},
     // G#
-    {"G#", uint32_t((pow(2.0, 32) * 440 / 22000)* pow(2.0, -1.0 / 12))},
+    {"G#", uint32_t(4294967296 * f / factor / fs)},
     // A
-    {"A", uint32_t(pow(2.0, 32) * 440 / 22000)},
+    {"A", uint32_t(4294967296 * f / fs)},
     // A#
-    {"A#", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, 1.0 / 12))},
+    {"A#", uint32_t(4294967296 * f * factor / fs)},
     // B
-   {"B", uint32_t((pow(2.0, 32) * 440 / 22000) * pow(2.0, 2.0 / 12))}
+   {"B", uint32_t(4294967296 * f * factor * factor / fs)}
 };
 
 double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
@@ -115,7 +117,7 @@ void addNodeToMsg(int note, bool press)
     TX_Message[0] = 'P';
   else
     TX_Message[0] = 'R';
-  TX_Message[1] = uint8_t(octaveNumber);
+  TX_Message[1] = uint8_t(octaveKnob->getCounter());
   TX_Message[2] = uint8_t(note);
 }
 std::pair<bool,bool> convertUint8ToPairs(uint8_t a, uint8_t b)
@@ -163,13 +165,14 @@ void sampleISR() {
         counter++;
         if(counter >= 12) counter = 0;
     }
-    
+    uint32_t tmpPhaseAcc = 0;
+    int numKeysPressed = 0;
     if(anyKeyPressed){
         for(int i = 0; i < 12; i++){
-            if(currentStepSize[counter] !=0){
-                phaseAcc += currentStepSize[counter];
-                delayMicroseconds(10);
-                break;
+            if(currentStepSize[i] !=0){
+                tmpPhaseAcc += currentStepSize[i];
+                numKeysPressed++;
+                counter++;
             }
             else{
                 counter++;
@@ -177,8 +180,10 @@ void sampleISR() {
             }
         }
     }
-    
-    int32_t Vout = (phaseAcc >> 24) - 128;
+    if(numKeysPressed){
+        phaseAcc += tmpPhaseAcc/numKeysPressed;
+    }
+    int32_t Vout = ((phaseAcc) >> 24) - 128;
     Vout = Vout >> (8 - volumeKnob->getCounter());
     analogWrite(OUTR_PIN, Vout + 128);
 }
@@ -249,7 +254,7 @@ void scanKeysTask(void * pvParameters) {
                 if(!(((keyArray[i]) >> j) & 1)){
                     anyKeyPressed = 1;
                     keyPressed_local += stepSizes[j + 4*i].name; 
-                    stepsize_local[j+4*i] = stepSizes[j+4*i].stepSize * octaveFactors[octaveKnob->getCounter()];;
+                    stepsize_local[j+4*i] = octaveFactors[octaveKnob->getCounter()] * stepSizes[j+4*i].stepSize;
                 }
                 else{
                     stepsize_local[j+4*i] = 0;
