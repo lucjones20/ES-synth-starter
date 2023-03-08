@@ -53,7 +53,7 @@ Knob* octaveKnob;
 //Step sizes
 volatile uint32_t currentStepSize[12];
 std::string keyPressed;
-volatile uint8_t TX_Message[8];
+uint8_t TX_Message[8];
 struct Note {
     std::string name;
     uint32_t stepSize;
@@ -165,13 +165,6 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
       xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
     }
   }
-}
-
-void generateSineWave(uint32_t phaseAcc, double duration, double samplingRate = 22000)
-{
-    // Serial.println("Sine");
-    
-    
 }
 
 volatile uint8_t anyKeyPressed = 0;
