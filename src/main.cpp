@@ -146,7 +146,7 @@ uint8_t readCols(){
 volatile uint8_t keyArray[7];
 long ctime = 0;
 void scanKeysTask(void * pvParameters) {
-    const TickType_t xFrequency = 10/portTICK_PERIOD_MS;
+    const TickType_t xFrequency = 50/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     while(1){
         for(int i = 0; i < 8; i++){
@@ -216,6 +216,7 @@ void displayUpdateTask(void * pvParameters){
         u8g2.drawStr(2,30,keyPressed.c_str());
         // u8g2.drawStr(10,30, "           VOLUME" + str(((Knob *) pvParameters)->getState()));
         u8g2.setCursor(30,30);
+        u8g2.print("          VOLUME: ");
         u8g2.print(((Knob *) pvParameters)->getState());
         u8g2.sendBuffer();          // transfer internal memory to the display
 
