@@ -399,6 +399,8 @@ void setup() {
     CAN_RegisterRX_ISR(CAN_RX_ISR);
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
+    volumeKnob = new Knob(0,8,5);
+  
     //Set pin directions
     pinMode(RA0_PIN, OUTPUT);
     pinMode(RA1_PIN, OUTPUT);
