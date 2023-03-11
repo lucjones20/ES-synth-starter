@@ -64,16 +64,13 @@ typedef struct KnobParameters{
     Knob* octaveKnob;
 } KnobParameters;
 
-<<<<<<< HEAD
 int fs = 22000;
 int f = 440;
 double factor = 1.05946309436;
-=======
 int octaveNumber;
 QueueHandle_t msgOutQ;
 QueueHandle_t msgInQ;
 
->>>>>>> ccb82d11114b45b7b6191dc890bde5d236be6775
 
 // const Note stepSizes[12] = {
 Note stepSizes[12] = {
@@ -389,6 +386,8 @@ void setup() {
     CAN_RegisterTX_ISR(CAN_TX_ISR);
     CAN_RegisterRX_ISR(CAN_RX_ISR);
     octaveKnob = new Knob(0,8,4);
+    volumeKnob = new Knob(0,8,5);
+  
     //Set pin directions
     pinMode(RA0_PIN, OUTPUT);
     pinMode(RA1_PIN, OUTPUT);
