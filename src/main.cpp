@@ -8,6 +8,7 @@
 #include <vector>
 #include <ES_CAN.h>
 #include <cmath>
+#include "adsr.cpp"
 
 
 
@@ -64,16 +65,13 @@ typedef struct KnobParameters{
     Knob* octaveKnob;
 } KnobParameters;
 
-<<<<<<< HEAD
 int fs = 22000;
 int f = 440;
 double factor = 1.05946309436;
-=======
 int octaveNumber;
 QueueHandle_t msgOutQ;
 QueueHandle_t msgInQ;
 
->>>>>>> ccb82d11114b45b7b6191dc890bde5d236be6775
 
 // const Note stepSizes[12] = {
 Note stepSizes[12] = {
@@ -173,36 +171,47 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
   }
 }
 
+ADSR* adsrKey1 = new ADSR();
+ADSR* adsrKey2 = new ADSR();
+ADSR* adsrKey3 = new ADSR();
+ADSR* adsrKey4 = new ADSR();
+ADSR* adsrKey5 = new ADSR();
+ADSR* adsrKey6 = new ADSR();
+ADSR* adsrKey7 = new ADSR();
+ADSR* adsrKey8 = new ADSR();
+ADSR* adsrKey9 = new ADSR();
+ADSR* adsrKey10 = new ADSR();
+ADSR* adsrKey11 = new ADSR();
+ADSR* adsrKey12 = new ADSR();
+ADSR* keyADSR[12] = {
+  adsrKey1,
+  adsrKey2,
+  adsrKey3,
+  adsrKey4,
+  adsrKey5,
+  adsrKey6,
+  adsrKey7,
+  adsrKey8,
+  adsrKey9,
+  adsrKey10,
+  adsrKey11,
+  adsrKey12
+};
+
 volatile uint8_t anyKeyPressed = 0;
-int8_t counter = 0;
-int8_t counter2 = 0;
 void sampleISR() {
-    static uint32_t phaseAcc = 0;
-    counter2++;
-    if(counter2 >= 25) counter2 = 0;
-    if (counter2 == 0){
-        counter++;
-        if(counter >= 12) counter = 0;
-    }
-    uint32_t tmpPhaseAcc = 0;
-    int numKeysPressed = 0;
+    static uint32_t phaseAcc[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int32_t tmpVout = 0;
     if(anyKeyPressed){
         for(int i = 0; i < 12; i++){
             if(currentStepSize[i] !=0){
-                tmpPhaseAcc += currentStepSize[i];
-                numKeysPressed++;
-                counter++;
-            }
-            else{
-                counter++;
-                if(counter >= 12) counter = 0;
+                phaseAcc[i] += currentStepSize[i];
+                tmpVout += ((phaseAcc[i] >> 24) - 128)*(keyADSR[i]->getAmplitude());
             }
         }
     }
-    if(numKeysPressed){
-        phaseAcc += tmpPhaseAcc/numKeysPressed;
-    }
-    int32_t Vout = ((phaseAcc) >> 24) - 128;
+    int32_t Vout = 0;
+    Vout = tmpVout;
     Vout = Vout >> (8 - volumeKnob->getCounter());
     analogWrite(OUTR_PIN, Vout + 128);
 }
@@ -243,7 +252,6 @@ uint8_t readCols(){
 }
 
 
-
 volatile uint8_t keyArray[7];
 void scanKeysTask(void * pvParameters) {
     const TickType_t xFrequency = 50/portTICK_PERIOD_MS;
@@ -274,8 +282,10 @@ void scanKeysTask(void * pvParameters) {
                     anyKeyPressed = 1;
                     keyPressed_local += stepSizes[j + 4*i].name; 
                     stepsize_local[j+4*i] = octaveFactors[octaveKnob->getCounter()] * stepSizes[j+4*i].stepSize;
+                    keyADSR[j+4*i]->nextState(1);
                 }
                 else{
+                    // keyADSR[j+4*i]->nextState(0);
                     stepsize_local[j+4*i] = 0;
                 }
             }
@@ -300,12 +310,11 @@ void scanKeysTask(void * pvParameters) {
             
             __atomic_store_n(&currentStepSize[i], stepsize_local[i], __ATOMIC_RELAXED);
             // uint32_t a = currentStepSize[i];
-            // Serial.println(a);
         }
         
 
         // __atomic_store_n(&currentStepSize, stepsize_local, __ATOMIC_RELAXED);
-        keyPressed = keyPressed_local;
+        // keyPressed = keyPressed_local;
     }
 }
 
@@ -388,6 +397,7 @@ void setup() {
     CAN_TX_Semaphore = xSemaphoreCreateCounting(3,3);
     CAN_RegisterTX_ISR(CAN_TX_ISR);
     CAN_RegisterRX_ISR(CAN_RX_ISR);
+    volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
     //Set pin directions
     pinMode(RA0_PIN, OUTPUT);

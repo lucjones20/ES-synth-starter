@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.flex": "lex",
         "array": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
@@ -48,6 +49,7 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "map": "cpp"
     }
 }
