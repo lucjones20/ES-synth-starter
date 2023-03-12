@@ -9,6 +9,7 @@
 #include <ES_CAN.h>
 #include <cmath>
 #include "adsr.cpp"
+#include <map>
 
 
 
@@ -46,9 +47,7 @@
 
 
 
-//Mutex
-SemaphoreHandle_t keyArrayMutex;
-SemaphoreHandle_t CAN_TX_Semaphore;
+
 Knob* volumeKnob;
 Knob* octaveKnob;
 //Step sizes
@@ -65,14 +64,27 @@ typedef struct KnobParameters{
     Knob* octaveKnob;
 } KnobParameters;
 
-int fs = 22000;
-int f = 440;
-double factor = 1.05946309436;
-int octaveNumber;
+//Maps for sound production:
+std::map<uint8_t, std::atomic<uint32_t>> currentStepMap;
+std::map<uint8_t, uint32_t> phaseAccMap;
+std::map<uint8_t, std::atomic<uint32_t>>::iterator it;
+
+//Mutex
+SemaphoreHandle_t keyArrayMutex;
+SemaphoreHandle_t CAN_TX_Semaphore;
 QueueHandle_t msgOutQ;
 QueueHandle_t msgInQ;
 
+//Enviroment control variables
+bool isMultiple = false;
 
+
+
+
+
+int fs = 22000;
+int f = 440;
+double factor = 1.05946309436;
 // const Note stepSizes[12] = {
 Note stepSizes[12] = {
     // C
@@ -161,12 +173,16 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
       TX_Message[0] = 'R';
       TX_Message[2] = uint8_t(i);
       xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+      currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i));
+      phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i));
     }
     else if(keyPairs[i].first == true && keyPairs[i].second == false)
     {
       TX_Message[0] = 'P';
       TX_Message[2] = uint8_t(i);
       xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+      phaseAccMap[octaveKnob->getCounter() *12 + i] = 0;
+      currentStepMap[octaveKnob->getCounter() * 12 + i] = octaveFactors[octaveKnob->getCounter()] * stepSizes[i].stepSize;
     }
   }
 }
@@ -198,23 +214,29 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 //   adsrKey12
 // };
 
-std::vector<ADSR> keyADSR(13);
+//std::vector<ADSR> keyADSR(13);
 
-volatile uint8_t anyKeyPressed = 0;
+//volatile uint8_t anyKeyPressed = 0;
+
 void sampleISR() {
-    static uint32_t phaseAcc[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int32_t tmpVout = 0;
-    if(anyKeyPressed){
+    //static uint32_t phaseAcc[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    /*if(anyKeyPressed){
         for(int i = 0; i < 12; i++){
             if(currentStepSize[i] !=0){
                 phaseAcc[i] += currentStepSize[i];
-                tmpVout += ((phaseAcc[i] >> 24) - 128)*(keyADSR[i].getAmplitude()/10);
+                tmpVout += ((phaseAcc[i] >> 24) - 128); //*(keyADSR[i].getAmplitude()/10);
             }
         }
     }
-    
-    int32_t Vout = 0;
-    Vout = tmpVout;
+    */
+   int32_t Vout = 0;
+   for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
+   {
+      phaseAccMap[it->first] += it->second;
+      Vout += (phaseAccMap[it->first] >> 24) -128;
+      
+   }
+
     Vout = Vout >> (8 - volumeKnob->getCounter());
     analogWrite(OUTR_PIN, Vout + 128);
 }
@@ -272,13 +294,14 @@ void scanKeysTask(void * pvParameters) {
             xSemaphoreGive(keyArrayMutex);
         }
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
-        uint32_t stepsize_local[12];
-        std::fill(stepsize_local, stepsize_local + 12, 0);
+        //uint32_t stepsize_local[12];
+        //std::fill(stepsize_local, stepsize_local + 12, 0);
         
         
-        std::string keyPressed_local = "";
+        //std::string keyPressed_local = "";
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         octaveKnob->advanceState((keyArray[4] & 0b0001) | (keyArray[4] & 0b0010));
+        /*
         for(int i = 0; i < 3; i++){
             for(int j = 0; j < 4; j++){
                 if(!(((keyArray[i]) >> j) & 1)){
@@ -293,34 +316,36 @@ void scanKeysTask(void * pvParameters) {
                 }
                 // We can use this to better simulate a real piano once ADSR is fixed
                 if( (((prevKeyArray[i] >> j) & 1)) & !((keyArray[i] >> j) & 1)){
-                    keyADSR[j+4*i].nextState(1);
+                   // keyADSR[j+4*i].nextState(1);
                     
                 }
                 if( (!((prevKeyArray[i] >> j) & 1)) & ((keyArray[i] >> j) & 1)){
                     Serial.println("keyADSR[0].getAmplitude()");
-                    keyADSR[j+4*i].nextState(0);
+                   // keyADSR[j+4*i].nextState(0);
                     
                 }
             }
         }
         
-
+     
         // currentStepSize = (pow(2.0, 32) * 440 / 22000);
         if(keyArray[0] == 0xF && keyArray[1] == 0xF && keyArray[2] == 0xF){
             anyKeyPressed = 0;
             keyPressed_local = "";
             std::fill(stepsize_local, stepsize_local + 12, 0);
         }
+        */
         generateMsg(&(keyArray[0]), &prevKeyArray[0]);
         volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
         prevKeyArray[0] = keyArray[0];
         prevKeyArray[1] = keyArray[1];
         prevKeyArray[2] = keyArray[2];
         xSemaphoreGive(keyArrayMutex);
-        
+        /*
         for(int i = 0; i < 12; i++){
             __atomic_store_n(&currentStepSize[i], stepsize_local[i], __ATOMIC_RELAXED);
         }
+        */
         
     }
 }
@@ -376,9 +401,23 @@ void CAN_RX_Task(void* pvParameters){
     xQueueReceive(msgInQ, msgIn, portMAX_DELAY);
     std::string local = "";
     if(msgIn[0] == 'P')
+    {
       local+= 'P';
+      if(isMultiple)
+      {
+        phaseAccMap[msgIn[2] + msgIn[1] * 12] = 0;
+        currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
+      }
+    }
     else
+    {
       local += 'R';
+      if(isMultiple)
+      {
+        currentStepMap.erase(currentStepMap.find(msgIn[2] + msgIn[1] * 12));
+        phaseAccMap.erase(phaseAccMap.find(msgIn[2] + msgIn[1] * 12));
+      }
+    }
     local += ", Note" + std::to_string(msgIn[2]);
     keyPressed = local;
   }
@@ -395,7 +434,7 @@ void CAN_RX_ISR (void) {
 
 void setup() {
     // put your setup code here, to run once:
-    CAN_Init(true);
+    CAN_Init(!isMultiple);
     setCANFilter(0x123,0x7ff);
     CAN_Start();
     keyArrayMutex = xSemaphoreCreateMutex();
