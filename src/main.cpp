@@ -171,32 +171,34 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
   }
 }
 
-ADSR* adsrKey1 = new ADSR();
-ADSR* adsrKey2 = new ADSR();
-ADSR* adsrKey3 = new ADSR();
-ADSR* adsrKey4 = new ADSR();
-ADSR* adsrKey5 = new ADSR();
-ADSR* adsrKey6 = new ADSR();
-ADSR* adsrKey7 = new ADSR();
-ADSR* adsrKey8 = new ADSR();
-ADSR* adsrKey9 = new ADSR();
-ADSR* adsrKey10 = new ADSR();
-ADSR* adsrKey11 = new ADSR();
-ADSR* adsrKey12 = new ADSR();
-ADSR* keyADSR[12] = {
-  adsrKey1,
-  adsrKey2,
-  adsrKey3,
-  adsrKey4,
-  adsrKey5,
-  adsrKey6,
-  adsrKey7,
-  adsrKey8,
-  adsrKey9,
-  adsrKey10,
-  adsrKey11,
-  adsrKey12
-};
+// ADSR* adsrKey1 = new ADSR();
+// ADSR* adsrKey2 = new ADSR();
+// ADSR* adsrKey3 = new ADSR();
+// ADSR* adsrKey4 = new ADSR();
+// ADSR* adsrKey5 = new ADSR();
+// ADSR* adsrKey6 = new ADSR();
+// ADSR* adsrKey7 = new ADSR();
+// ADSR* adsrKey8 = new ADSR();
+// ADSR* adsrKey9 = new ADSR();
+// ADSR* adsrKey10 = new ADSR();
+// ADSR* adsrKey11 = new ADSR();
+// ADSR* adsrKey12 = new ADSR();
+// ADSR* keyADSR[12] = {
+//   adsrKey1,
+//   adsrKey2,
+//   adsrKey3,
+//   adsrKey4,
+//   adsrKey5,
+//   adsrKey6,
+//   adsrKey7,
+//   adsrKey8,
+//   adsrKey9,
+//   adsrKey10,
+//   adsrKey11,
+//   adsrKey12
+// };
+
+std::vector<ADSR> keyADSR(13);
 
 volatile uint8_t anyKeyPressed = 0;
 void sampleISR() {
@@ -206,10 +208,11 @@ void sampleISR() {
         for(int i = 0; i < 12; i++){
             if(currentStepSize[i] !=0){
                 phaseAcc[i] += currentStepSize[i];
-                tmpVout += ((phaseAcc[i] >> 24) - 128)*(keyADSR[i]->getAmplitude());
+                tmpVout += ((phaseAcc[i] >> 24) - 128)*(keyADSR[i].getAmplitude()/10);
             }
         }
     }
+    
     int32_t Vout = 0;
     Vout = tmpVout;
     Vout = Vout >> (8 - volumeKnob->getCounter());
@@ -254,7 +257,7 @@ uint8_t readCols(){
 
 volatile uint8_t keyArray[7];
 void scanKeysTask(void * pvParameters) {
-    const TickType_t xFrequency = 50/portTICK_PERIOD_MS;
+    const TickType_t xFrequency = 75/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
     while(1){
@@ -282,15 +285,25 @@ void scanKeysTask(void * pvParameters) {
                     anyKeyPressed = 1;
                     keyPressed_local += stepSizes[j + 4*i].name; 
                     stepsize_local[j+4*i] = octaveFactors[octaveKnob->getCounter()] * stepSizes[j+4*i].stepSize;
-                    keyADSR[j+4*i]->nextState(1);
+                    // keyADSR[j+4*i].nextState(1);
+                    // Serial.println(keyADSR[0].getState());
                 }
                 else{
-                    // keyADSR[j+4*i]->nextState(0);
                     stepsize_local[j+4*i] = 0;
+                }
+                // We can use this to better simulate a real piano once ADSR is fixed
+                if( (((prevKeyArray[i] >> j) & 1)) & !((keyArray[i] >> j) & 1)){
+                    keyADSR[j+4*i].nextState(1);
+                    
+                }
+                if( (!((prevKeyArray[i] >> j) & 1)) & ((keyArray[i] >> j) & 1)){
+                    Serial.println("keyADSR[0].getAmplitude()");
+                    keyADSR[j+4*i].nextState(0);
+                    
                 }
             }
         }
-
+        
 
         // currentStepSize = (pow(2.0, 32) * 440 / 22000);
         if(keyArray[0] == 0xF && keyArray[1] == 0xF && keyArray[2] == 0xF){
@@ -305,16 +318,10 @@ void scanKeysTask(void * pvParameters) {
         prevKeyArray[2] = keyArray[2];
         xSemaphoreGive(keyArrayMutex);
         
-        uint32_t time_micro = micros();
         for(int i = 0; i < 12; i++){
-            
             __atomic_store_n(&currentStepSize[i], stepsize_local[i], __ATOMIC_RELAXED);
-            // uint32_t a = currentStepSize[i];
         }
         
-
-        // __atomic_store_n(&currentStepSize, stepsize_local, __ATOMIC_RELAXED);
-        // keyPressed = keyPressed_local;
     }
 }
 
