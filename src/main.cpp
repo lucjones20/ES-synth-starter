@@ -129,62 +129,31 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
     delayMicroseconds(2);
     digitalWrite(REN_PIN,LOW);
 }
-void addNodeToMsg(int note, bool press)
-{
-  if(press)
-    TX_Message[0] = 'P';
-  else
-    TX_Message[0] = 'R';
-  TX_Message[1] = uint8_t(octaveKnob->getCounter());
-  TX_Message[2] = uint8_t(note);
-}
-std::pair<bool,bool> convertUint8ToPairs(uint8_t a, uint8_t b)
-{
-  std::pair<bool,bool> ret;
-  if(a == 0b0)
-    ret.first = true;
-  else
-    ret.first = false;
-  if(b == 0b0)
-    ret.second = true;
-  else
-    ret.second = false;
-  return ret;
-}
 void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 {
-  std::vector<std::pair<bool,bool>> keyPairs;
-  keyPairs.push_back(convertUint8ToPairs(*currentKeys & 0b1, *prevKeys & 0b01)); //Note 0
-  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 1 & 0b1, *prevKeys >> 1 & 0b1)); //Note 1
-  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 2 & 0b1, *prevKeys >> 2 & 0b1)); //Note 2
-  keyPairs.push_back(convertUint8ToPairs(*currentKeys >> 3 & 0b1, *prevKeys >> 3 & 0b1)); //Note 3
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) & 0b1, *(prevKeys + 1) & 0b01)); //Note 4
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 1 & 0b1, *(prevKeys + 1) >> 1 & 0b1)); //Note 5
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 2 & 0b1, *(prevKeys + 1) >> 2 & 0b1)); //Note 6
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 1) >> 3 & 0b1, *(prevKeys + 1) >> 3 & 0b1)); //Note 7
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) & 0b1, *(prevKeys + 2) & 0b01)); //Note 8
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) >> 1 & 0b1, *(prevKeys + 2) >> 1 & 0b1)); //Note 9
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) >> 2 & 0b1, *(prevKeys + 2) >> 2 & 0b1)); //Note 10
-  keyPairs.push_back(convertUint8ToPairs(*(currentKeys + 2) >> 3 & 0b1, *(prevKeys + 2) >> 3 & 0b1)); //Note 11
-  for(int i = 0; i < 12; i++)
-  {
-    if(keyPairs[i].first == false && keyPairs[i].second == true)
+  TX_Message[1] = uint8_t(octaveKnob->getCounter());
+  for (int i = 0; i < 3; i++)
+    for(int j = 0; j < 4; j++)
     {
-      TX_Message[0] = 'R';
-      TX_Message[2] = uint8_t(i);
-      xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
-      currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i));
-      phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i));
+      bool cBit = (*(currentKeys + i) >> j & 0b1) == 0b0;
+      bool pBit = (*(prevKeys + i) >> j & 0b1) == 0b0;
+      if(!cBit && pBit)
+      {
+        TX_Message[0] = 'R';
+        TX_Message[2] = uint8_t(i* 4 + j);
+        xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+        currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i *4 + j));
+        phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i * 4 + j));
+      }
+      else if(cBit && !pBit)
+      {
+        TX_Message[0] = 'P';
+        TX_Message[2] = uint8_t(i *4 + j);
+        xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+        phaseAccMap[octaveKnob->getCounter() *12 + i *4 + j] = 0;
+        currentStepMap[octaveKnob->getCounter() * 12 + i * 4 + j] = octaveFactors[octaveKnob->getCounter()] * stepSizes[i *4 + j].stepSize;
+      }
     }
-    else if(keyPairs[i].first == true && keyPairs[i].second == false)
-    {
-      TX_Message[0] = 'P';
-      TX_Message[2] = uint8_t(i);
-      xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
-      phaseAccMap[octaveKnob->getCounter() *12 + i] = 0;
-      currentStepMap[octaveKnob->getCounter() * 12 + i] = octaveFactors[octaveKnob->getCounter()] * stepSizes[i].stepSize;
-    }
-  }
 }
 
 // ADSR* adsrKey1 = new ADSR();
