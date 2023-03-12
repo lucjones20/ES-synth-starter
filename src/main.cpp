@@ -115,6 +115,7 @@ Note stepSizes[12] = {
 
 double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
 
+std::vector<ADSR> keyADSR(12);
 //Display driver object
 U8G2_SSD1305_128X32_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
@@ -137,11 +138,22 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
     {
       bool cBit = (*(currentKeys + i) >> j & 0b1) == 0b0;
       bool pBit = (*(prevKeys + i) >> j & 0b1) == 0b0;
+      if(cBit) {
+            keyADSR[j+4*i].nextState(1);
+            
+            // Serial.println(keyADSR[11].getState());
+        }
+      if(!cBit) {
+            keyADSR[j+4*i].nextState(0);
+            Serial.println(keyADSR[0].getAmplitude());
+      }
+
       if(!cBit && pBit)
       {
         TX_Message[0] = 'R';
         TX_Message[2] = uint8_t(i* 4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+        
         currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i *4 + j));
         phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i * 4 + j));
       }
@@ -150,6 +162,7 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         TX_Message[0] = 'P';
         TX_Message[2] = uint8_t(i *4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+        
         phaseAccMap[octaveKnob->getCounter() *12 + i *4 + j] = 0;
         currentStepMap[octaveKnob->getCounter() * 12 + i * 4 + j] = octaveFactors[octaveKnob->getCounter()] * stepSizes[i *4 + j].stepSize;
       }
@@ -183,7 +196,7 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 //   adsrKey12
 // };
 
-//std::vector<ADSR> keyADSR(13);
+
 
 //volatile uint8_t anyKeyPressed = 0;
 
@@ -202,9 +215,11 @@ void sampleISR() {
    for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
    {
       phaseAccMap[it->first] += it->second;
-      Vout += (phaseAccMap[it->first] >> 24) -128;
-      
+      Vout += ((phaseAccMap[it->first] >> 24) -128);
+    //   Vout += ((phaseAccMap[it->first] >> 24) -128)*(keyADSR[it->first - 48].getAmplitude()/32);
+
    }
+   
 
     Vout = Vout >> (8 - volumeKnob->getCounter());
     analogWrite(OUTR_PIN, Vout + 128);

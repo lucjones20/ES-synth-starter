@@ -12,40 +12,46 @@ class ADSR{
 
             if(isPressed){
                 if(state == 0){
-                    if(amplitude >= 8){
+                    if(amplitude >= 64){
                         state = 1;
                     }
                     else{
-                        amplitude += 1;
+                        amplitude += 32;
                     }
                 }
                 else if(state == 1)
                 {
-                    if(amplitude <= 8){
-                        amplitude = 6;
-                        state = 2;
+                    if(amplitude <= 40){
+                        amplitude = 40;
+                        state = 3;
                     }
                     else{
                         amplitude -= 1;
                     }
                 }
                 else if(state == 3){
-                    state = 0;
+                    if(amplitude <= 0 | amplitude > 64){
+                        amplitude = 0;
+                        state = 0;
+                    }
+                    else{
+                        amplitude -= 4;
+                    }                   
                 }
                  
             }
             else{
                 state = 3;
-                if(amplitude <= 0){
+                if(amplitude <= 0 | amplitude > 64){
                     amplitude = 0;
                 }
                 else{
-                    amplitude -= 1;
+                    amplitude -= 4;
                 }
                 
             }
         }
-        double getAmplitude(){
+        uint8_t getAmplitude(){
             return  amplitude.load();
         }
         uint8_t getState(){
