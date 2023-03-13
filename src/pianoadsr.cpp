@@ -30,23 +30,23 @@ class ADSR{
                     }
                 }
                 else if(state == 3){
-                    if(amplitude <= 0 | amplitude > 64){
+                    if(amplitude <= 20 | amplitude > 64){
                         amplitude = 0;
                         state = 0;
                     }
                     else{
-                        amplitude -= 2;
+                        amplitude -= 4;
                     }                   
                 }
                  
             }
             else{
                 state = 3;
-                if(amplitude <= 0 | amplitude > 64){
+                if(amplitude <= 20 | amplitude > 64){
                     amplitude = 0;
                 }
                 else{
-                    amplitude -= 2;
+                    amplitude -= 4;
                 }
                 
             }

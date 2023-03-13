@@ -148,15 +148,20 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
             Serial.println(keyADSR[0].getAmplitude());
       }
 
+      if(keyADSR[j+4*i].getAmplitude() == 0) {}
+    //         currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i *4 + j));
+    //         phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i * 4 + j));
+    //   }
+
       if(!cBit && pBit)
       {
         TX_Message[0] = 'R';
         TX_Message[2] = uint8_t(i* 4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
         
-        currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i *4 + j));
-        phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i * 4 + j));
+        
       }
+      
       else if(cBit && !pBit)
       {
         TX_Message[0] = 'P';
@@ -215,8 +220,8 @@ void sampleISR() {
    for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
    {
       phaseAccMap[it->first] += it->second;
-      Vout += ((phaseAccMap[it->first] >> 24) -128);
-    //   Vout += ((phaseAccMap[it->first] >> 24) -128)*(keyADSR[it->first - 48].getAmplitude()/32);
+    //   Vout += ((phaseAccMap[it->first] >> 24) -128);
+      Vout += ((phaseAccMap[it->first] >> 24) -128)*(keyADSR[it->first - 48].getAmplitude()/32);
 
    }
    
