@@ -12,12 +12,8 @@ class ADSR{
 
             if(isPressed){
                 if(state == 0){
-                    if(amplitude >= 64){
-                        state = 1;
-                    }
-                    else{
-                        amplitude += 32;
-                    }
+                    amplitude = 64;
+                    state = 1;
                 }
                 else if(state == 1)
                 {
@@ -30,7 +26,7 @@ class ADSR{
                     }
                 }
                 else if(state == 3){
-                    if(amplitude <= 0 | amplitude > 64){
+                    if(amplitude <= 10 || amplitude > 64){
                         amplitude = 0;
                         state = 0;
                     }
@@ -42,8 +38,9 @@ class ADSR{
             }
             else{
                 state = 3;
-                if(amplitude <= 0 | amplitude > 64){
+                if(amplitude <= 10 || amplitude > 64){
                     amplitude = 0;
+                    state = 0;
                 }
                 else{
                     amplitude -= 2;

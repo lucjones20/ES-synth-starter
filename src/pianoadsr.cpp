@@ -1,49 +1,37 @@
 #include <atomic>
 
 
-class ADSR{
+class pianoADSR{
 
     volatile std::atomic<uint8_t> state;
     volatile std::atomic<uint8_t> amplitude;
 
     public:
-        ADSR(): state(0), amplitude(0.){}
-        void nextState(uint8_t isPressed){
+        pianoADSR(): state(0), amplitude(0.){}
+        void nextState(uint8_t isPressed, uint8_t previsPressed){
 
-            if(isPressed){
-                if(state == 0){
-                    if(amplitude >= 64){
-                        state = 1;
-                    }
-                    else{
-                        amplitude += 32;
-                    }
-                }
-                else if(state == 1)
-                {
-                    if(amplitude <= 40){
-                        amplitude = 40;
-                        state = 3;
-                    }
-                    else{
-                        amplitude -= 1;
-                    }
-                }
-                else if(state == 3){
-                    if(amplitude <= 20 | amplitude > 64){
-                        amplitude = 0;
-                        state = 0;
-                    }
-                    else{
-                        amplitude -= 4;
-                    }                   
-                }
-                 
+            if(isPressed && !previsPressed){
+                amplitude = 64;
+                state = 1;
             }
-            else{
-                state = 3;
-                if(amplitude <= 20 | amplitude > 64){
+            else if (isPressed && previsPressed)
+            {
+                if(amplitude <= 10){
                     amplitude = 0;
+                }
+                else{
+                    amplitude -= 2;
+                }
+            }
+            else if (!isPressed && previsPressed)
+            {
+                state = 3;
+            }
+            
+            else{
+                if(amplitude <= 10 || amplitude > 64){
+                    amplitude = 0;
+                    state = 0;
                 }
                 else{
                     amplitude -= 4;
