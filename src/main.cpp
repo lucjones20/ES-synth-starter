@@ -150,7 +150,7 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
       // }
 
       // if(keyADSR[j+4*i].getAmplitude() == 0) {
-        
+        // DISCUSS THIS PART  - THIS SHOULD ONLY HAPPEN WHEN AMPLITUDE  = 0 AND THE KEY HAS BEEN PRESSED IN THE PAST - WILL PROBS REQUIRE AN ARRAY THAT SAYS IF THE KEY HAS BEEN PRESSED RECENTLY
       //       // currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i *4 + j));
       //       // phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i * 4 + j));
       // }

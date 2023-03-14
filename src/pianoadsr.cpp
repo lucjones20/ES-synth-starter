@@ -3,6 +3,8 @@
 
 class pianoADSR{
 
+    // NGL STATE NOT RLLY NEEDED IN THIS SCRIPT
+
     volatile std::atomic<uint8_t> state;
     volatile std::atomic<uint8_t> amplitude;
 
