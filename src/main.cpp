@@ -8,8 +8,7 @@
 #include <vector>
 #include <ES_CAN.h>
 #include <cmath>
-#include "adsr.cpp"
-#include "pianoadsr.cpp"
+// #include "pianoadsr.cpp"
 #include <map>
 
 
@@ -69,6 +68,7 @@ typedef struct KnobParameters{
 std::map<uint8_t, std::atomic<uint32_t>> currentStepMap;
 std::map<uint8_t, uint32_t> phaseAccMap;
 std::map<uint8_t, std::atomic<uint32_t>>::iterator it;
+std::map<uint8_t, uint8_t> amplitudeMap;
 
 //Mutex
 SemaphoreHandle_t keyArrayMutex;
@@ -80,7 +80,33 @@ QueueHandle_t msgInQ;
 bool isMultiple = false;
 
 
-
+void nextAmplitude(uint8_t isPressed, uint8_t previsPressed, uint8_t keyNumber){
+            if(isPressed && !previsPressed){
+                amplitudeMap[keyNumber] = 64;
+            }
+            else if (isPressed && previsPressed)
+            {
+                if(amplitudeMap[keyNumber] <= 10){
+                    amplitudeMap[keyNumber] = 0;
+                }
+                else{
+                    amplitudeMap[keyNumber] -= 2;
+                }
+            }
+            else if (!isPressed && previsPressed)
+            {
+            }
+            
+            else{
+                if(amplitudeMap[keyNumber] <= 10 || amplitudeMap[keyNumber] > 64){
+                    amplitudeMap[keyNumber] = 0;
+                }
+                else{
+                    amplitudeMap[keyNumber] -= 6;
+                }
+                
+            }
+        }
 
 
 int fs = 22000;
@@ -116,7 +142,7 @@ Note stepSizes[12] = {
 
 double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
 
-std::vector<pianoADSR> keyADSR(12);
+// std::vector<pianoADSR> keyADSR(12);
 //Display driver object
 U8G2_SSD1305_128X32_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
@@ -154,11 +180,13 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
       //       // currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i *4 + j));
       //       // phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i * 4 + j));
       // }
-      keyADSR[j+4*i].nextState(cBit, pBit);
+      // keyADSR[j+4*i].nextState(cBit, pBit);
+      nextAmplitude(cBit, pBit, octaveKnob->getCounter() * 12 + j + 4 * i);
+      // Serial.println(it->first); 
       if(!cBit && pBit)
       {
         TX_Message[0] = 'R';
-        TX_Message[2] = uint8_t(i* 4 + j);
+        TX_Message[2] = uint8_t(i * 4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
       }
       
@@ -191,9 +219,11 @@ void sampleISR() {
    for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
    {
       phaseAccMap[it->first] += it->second;
-    //   Vout += ((phaseAccMap[it->first] >> 24) -128);
-      Vout += ((phaseAccMap[it->first] >> 24) -128)*(static_cast<float>(keyADSR[it->first - octaveKnob->getCounter() * 12].getAmplitude())/64);
-      // Serial.println((keyADSR[0].getAmplitude()));
+      // Vout += ((phaseAccMap[it->first] >> 24) -128);
+      // Vout += ((phaseAccMap[it->first] >> 24))*(static_cast<float>(keyADSR[it->first - octaveKnob->getCounter() * 12].getAmplitude())/64)-128;
+      Vout += ((phaseAccMap[it->first] >> 24))*(static_cast<float>(amplitudeMap[it->first])/64)-128;
+      // Serial.println(it->first);
+      
    }
    
    
@@ -208,7 +238,7 @@ void setRow(uint8_t rowIdx){
 
 	digitalWrite(RA0_PIN, LOW);
 	digitalWrite(RA1_PIN, LOW);
-    digitalWrite(RA2_PIN, LOW);
+  digitalWrite(RA2_PIN, LOW);
 
 	
 	if(rowIdx & 0b1){
