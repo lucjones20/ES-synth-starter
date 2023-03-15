@@ -216,7 +216,7 @@ void sampleISR() {
     for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
     {
       phaseAccMap[it->first] += it->second;
-      Vout += ((phaseAccMap[it->first] >> 24))*(static_cast<float>(amplitudeMap[it->first].first)/64)-128;
+      Vout += ((phaseAccMap[it->first] >> 24))*((float)(amplitudeMap[it->first].first)/64)-128;
     }
     mapFlag = true;
     Vout = Vout >> (8 - volumeKnob->getCounter());
