@@ -43,22 +43,19 @@
     const int DRST_BIT = 4;
     const int HKOW_BIT = 5;
     const int HKOE_BIT = 6;
-
+  bool expected = true;
 
 
 
 
 Knob* volumeKnob;
 Knob* octaveKnob;
-//Step sizes
-volatile uint32_t currentStepSize[12];
 std::string keyPressed;
 uint8_t TX_Message[8];
 struct Note {
     std::string name;
     uint32_t stepSize;
 };
-
 typedef struct KnobParameters{
     Knob* volumeKnob;
     Knob* octaveKnob;
@@ -68,11 +65,33 @@ typedef struct KnobParameters{
 std::map<uint8_t, std::atomic<uint32_t>> currentStepMap;
 std::map<uint8_t, uint32_t> phaseAccMap;
 std::map<uint8_t, std::atomic<uint32_t>>::iterator it;
-std::map<uint8_t, uint8_t> amplitudeMap;
+std::map<uint8_t, std::pair<uint8_t,uint8_t>> amplitudeMap;
+std::atomic<bool> mapFlag;
+
+
+//Recording stuff
+struct Recording{
+  std::vector<std::pair<uint8_t,uint16_t>> keyStrokes;
+  int curIndex = 0;
+  void addKeyStroke(uint8_t index)
+  {
+    if(keyStrokes.size() != 0)
+      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis()) - keyStrokes[keyStrokes.size() - 1].second));
+    else 
+      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis())));
+  }
+};
+HardwareTimer *sampleTimer;
+enum Mode{Solo, MultiMaster, MultiSlave, MultiRecordOn, MutliRecordPlayback};
+std::vector<Recording*> recordings;
+std::atomic<int> recordIndex;
+
+std::atomic<Mode> control;
 
 //Mutex
 SemaphoreHandle_t keyArrayMutex;
 SemaphoreHandle_t CAN_TX_Semaphore;
+SemaphoreHandle_t recordMutex;
 QueueHandle_t msgOutQ;
 QueueHandle_t msgInQ;
 
@@ -80,33 +99,24 @@ QueueHandle_t msgInQ;
 bool isMultiple = false;
 
 
-void nextAmplitude(uint8_t isPressed, uint8_t previsPressed, uint8_t keyNumber){
-            if(isPressed && !previsPressed){
-                amplitudeMap[keyNumber] = 64;
-            }
-            else if (isPressed && previsPressed)
-            {
-                if(amplitudeMap[keyNumber] <= 10){
-                    amplitudeMap[keyNumber] = 0;
-                }
-                else{
-                    amplitudeMap[keyNumber] -= 2;
-                }
-            }
-            else if (!isPressed && previsPressed)
-            {
-            }
-            
-            else{
-                if(amplitudeMap[keyNumber] <= 10 || amplitudeMap[keyNumber] > 64){
-                    amplitudeMap[keyNumber] = 0;
-                }
-                else{
-                    amplitudeMap[keyNumber] -= 6;
-                }
-                
-            }
-        }
+bool nextAmplitude(std::pair<uint8_t,uint8_t>* _state){
+  switch (_state->second)
+  {
+    case 0b10:
+      _state->second = 0b11;
+      return true;
+    case 0b11:
+      if(_state->first <= 10) return false;
+      else _state->first -= 2;
+      break;
+    case 0b01:
+      if(_state->first <= 10 || _state->first > 64) return false;
+      else _state->first -= 6;
+      break;
+    default: break;
+  }
+  return true;
+}
 
 
 int fs = 22000;
@@ -165,29 +175,19 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
     {
       bool cBit = (*(currentKeys + i) >> j & 0b1) == 0b0;
       bool pBit = (*(prevKeys + i) >> j & 0b1) == 0b0;
-      // if(cBit) {
-            
-            
-      //       // Serial.println(keyADSR[11].getState());
-      //   }
-      // if(!cBit) {
-            
-      //       Serial.println(keyADSR[0].getAmplitude());
-      // }
-
-      // if(keyADSR[j+4*i].getAmplitude() == 0) {
-        // DISCUSS THIS PART  - THIS SHOULD ONLY HAPPEN WHEN AMPLITUDE  = 0 AND THE KEY HAS BEEN PRESSED IN THE PAST - WILL PROBS REQUIRE AN ARRAY THAT SAYS IF THE KEY HAS BEEN PRESSED RECENTLY
-      //       // currentStepMap.erase(currentStepMap.find(octaveKnob->getCounter() * 12 + i *4 + j));
-      //       // phaseAccMap.erase(phaseAccMap.find(octaveKnob->getCounter() * 12 + i * 4 + j));
-      // }
-      // keyADSR[j+4*i].nextState(cBit, pBit);
-      nextAmplitude(cBit, pBit, octaveKnob->getCounter() * 12 + j + 4 * i);
-      // Serial.println(it->first); 
       if(!cBit && pBit)
       {
         TX_Message[0] = 'R';
         TX_Message[2] = uint8_t(i * 4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+        if(amplitudeMap.find(octaveKnob->getCounter() * 12 + i * 4 + j) != amplitudeMap.end())
+          amplitudeMap[octaveKnob->getCounter() * 12 + i * 4 + j] = std::pair<uint8_t,uint8_t>(amplitudeMap[octaveKnob->getCounter() * 12 + i * 4 + j].first, 0b01);
+        if(control.load() == MultiRecordOn)
+        {
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            recordings[recordIndex]->addKeyStroke(TX_Message[2] + TX_Message[1]*12);
+            xSemaphoreGive(recordMutex);
+        }
       }
       
       else if(cBit && !pBit)
@@ -196,41 +196,34 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         TX_Message[2] = uint8_t(i *4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
         phaseAccMap[octaveKnob->getCounter() *12 + i *4 + j] = 0;
+        amplitudeMap[octaveKnob->getCounter() * 12 + i * 4 + j] = std::pair<uint8_t,uint8_t>(64, 0b10);
         currentStepMap[octaveKnob->getCounter() * 12 + i * 4 + j] = octaveFactors[octaveKnob->getCounter()] * stepSizes[i *4 + j].stepSize;
+        if(control.load() == MultiRecordOn)
+        {
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            recordings[recordIndex]->addKeyStroke(TX_Message[2] + TX_Message[1]*12);
+            xSemaphoreGive(recordMutex);
+        }
       }
     }
 }
 
 
-//volatile uint8_t anyKeyPressed = 0;
-
 void sampleISR() {
-    //static uint32_t phaseAcc[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    /*if(anyKeyPressed){
-        for(int i = 0; i < 12; i++){
-            if(currentStepSize[i] !=0){
-                phaseAcc[i] += currentStepSize[i];
-                tmpVout += ((phaseAcc[i] >> 24) - 128); //*(keyADSR[i].getAmplitude()/10);
-            }
-        }
-    }
-    */
-   int32_t Vout = 0;
-   for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
-   {
+  int16_t Vout = 0;
+  if(mapFlag.compare_exchange_weak(expected, false))
+  {
+    for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
+    {
       phaseAccMap[it->first] += it->second;
-      // Vout += ((phaseAccMap[it->first] >> 24) -128);
-      // Vout += ((phaseAccMap[it->first] >> 24))*(static_cast<float>(keyADSR[it->first - octaveKnob->getCounter() * 12].getAmplitude())/64)-128;
-      Vout += ((phaseAccMap[it->first] >> 24))*(static_cast<float>(amplitudeMap[it->first])/64)-128;
-      // Serial.println(it->first);
-      
-   }
-   
-   
-
+      Vout += ((phaseAccMap[it->first] >> 24))*(static_cast<float>(amplitudeMap[it->first].first)/64)-128;
+    }
+    mapFlag = true;
     Vout = Vout >> (8 - volumeKnob->getCounter());
     analogWrite(OUTR_PIN, Vout + 128);
+  }
 }
+
 
 void setRow(uint8_t rowIdx){
 	//Disable the row select enable (REN_PIN) first to prevent glitches as the address pins are changed
@@ -274,7 +267,7 @@ void scanKeysTask(void * pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
     while(1){
-        for(int i = 0; i < 8; i++){
+        for(int i = 0; i < 7; i++){
             // Only 0-2 for now as thats where keys are - will be expanded to 0 - 7
             // Delay for parasitic capacitance
             setRow(i);
@@ -284,60 +277,31 @@ void scanKeysTask(void * pvParameters) {
             keyArray[i] = readCols();
             xSemaphoreGive(keyArrayMutex);
         }
+        
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
-        //uint32_t stepsize_local[12];
-        //std::fill(stepsize_local, stepsize_local + 12, 0);
-        
-        
-        //std::string keyPressed_local = "";
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         octaveKnob->advanceState((keyArray[4] & 0b0001) | (keyArray[4] & 0b0010));
-        /*
-        for(int i = 0; i < 3; i++){
-            for(int j = 0; j < 4; j++){
-                if(!(((keyArray[i]) >> j) & 1)){
-                    anyKeyPressed = 1;
-                    keyPressed_local += stepSizes[j + 4*i].name; 
-                    stepsize_local[j+4*i] = octaveFactors[octaveKnob->getCounter()] * stepSizes[j+4*i].stepSize;
-                    // keyADSR[j+4*i].nextState(1);
-                    // Serial.println(keyADSR[0].getState());
-                }
-                else{
-                    stepsize_local[j+4*i] = 0;
-                }
-                // We can use this to better simulate a real piano once ADSR is fixed
-                if( (((prevKeyArray[i] >> j) & 1)) & !((keyArray[i] >> j) & 1)){
-                   // keyADSR[j+4*i].nextState(1);
-                    
-                }
-                if( (!((prevKeyArray[i] >> j) & 1)) & ((keyArray[i] >> j) & 1)){
-                    Serial.println("keyADSR[0].getAmplitude()");
-                   // keyADSR[j+4*i].nextState(0);
-                    
-                }
+
+
+        if(mapFlag.compare_exchange_weak(expected, false))
+        {  
+          generateMsg(&(keyArray[0]), &prevKeyArray[0]);
+          for(auto ite = amplitudeMap.begin(); ite != amplitudeMap.end(); ite++)
+            if(!nextAmplitude(&ite->second))
+            {
+              currentStepMap.erase(currentStepMap.find(ite->first));
+              phaseAccMap.erase(phaseAccMap.find(ite->first));
+              ite = amplitudeMap.erase(amplitudeMap.find(ite->first));
+              if(ite == amplitudeMap.end())
+                break;
             }
+          mapFlag = true;
         }
-        
-     
-        // currentStepSize = (pow(2.0, 32) * 440 / 22000);
-        if(keyArray[0] == 0xF && keyArray[1] == 0xF && keyArray[2] == 0xF){
-            anyKeyPressed = 0;
-            keyPressed_local = "";
-            std::fill(stepsize_local, stepsize_local + 12, 0);
-        }
-        */
-        generateMsg(&(keyArray[0]), &prevKeyArray[0]);
         volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
         prevKeyArray[0] = keyArray[0];
         prevKeyArray[1] = keyArray[1];
         prevKeyArray[2] = keyArray[2];
-        xSemaphoreGive(keyArrayMutex);
-        /*
-        for(int i = 0; i < 12; i++){
-            __atomic_store_n(&currentStepSize[i], stepsize_local[i], __ATOMIC_RELAXED);
-        }
-        */
-        
+        xSemaphoreGive(keyArrayMutex);        
     }
 }
 
@@ -396,8 +360,17 @@ void CAN_RX_Task(void* pvParameters){
       local+= 'P';
       if(isMultiple)
       {
+        while(!mapFlag.compare_exchange_weak(expected,false));
         phaseAccMap[msgIn[2] + msgIn[1] * 12] = 0;
         currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
+        amplitudeMap[msgIn[2] + msgIn[1] * 12] = std::pair<uint8_t,uint8_t>(64, 0b10);
+        mapFlag = true;
+        if(control.load() == MultiRecordOn)
+        {
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            recordings[recordIndex]->addKeyStroke(msgIn[2] + msgIn[1]*12);
+            xSemaphoreGive(recordMutex);
+        }
       }
     }
     else
@@ -405,9 +378,18 @@ void CAN_RX_Task(void* pvParameters){
       local += 'R';
       if(isMultiple)
       {
-        currentStepMap.erase(currentStepMap.find(msgIn[2] + msgIn[1] * 12));
-        phaseAccMap.erase(phaseAccMap.find(msgIn[2] + msgIn[1] * 12));
+        while(!mapFlag.compare_exchange_weak(expected,false));
+        if(amplitudeMap.find(msgIn[2] + msgIn[1] * 12) != amplitudeMap.end())
+          amplitudeMap[msgIn[2] + msgIn[1] * 12] = std::pair<uint8_t, uint8_t>(amplitudeMap[msgIn[2] + msgIn[1] * 12].first, 0b01);
+        mapFlag = true;
+        if(control.load() == MultiRecordOn)
+        {
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            recordings[recordIndex]->addKeyStroke(msgIn[2] + msgIn[1]*12);
+            xSemaphoreGive(recordMutex);
+        }
       }
+      
     }
     local += ", Note" + std::to_string(msgIn[2]);
     keyPressed = local;
@@ -425,10 +407,13 @@ void CAN_RX_ISR (void) {
 
 void setup() {
     // put your setup code here, to run once:
+    mapFlag = true;
+    control = Solo;
     CAN_Init(!isMultiple);
     setCANFilter(0x123,0x7ff);
     CAN_Start();
     keyArrayMutex = xSemaphoreCreateMutex();
+    recordMutex = xSemaphoreCreateMutex();
     msgOutQ = xQueueCreate(36,8);
     msgInQ = xQueueCreate(36,8);
     CAN_TX_Semaphore = xSemaphoreCreateCounting(3,3);
