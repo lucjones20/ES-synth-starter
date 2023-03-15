@@ -43,7 +43,7 @@
     const int DRST_BIT = 4;
     const int HKOW_BIT = 5;
     const int HKOE_BIT = 6;
-  bool expected = true;
+
 
 
 
@@ -211,6 +211,7 @@ void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 
 void sampleISR() {
   int16_t Vout = 0;
+  bool expected = true;
   if(mapFlag.compare_exchange_weak(expected, false))
   {
     for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
@@ -282,7 +283,7 @@ void scanKeysTask(void * pvParameters) {
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         octaveKnob->advanceState((keyArray[4] & 0b0001) | (keyArray[4] & 0b0010));
 
-
+        bool expected = true;
         if(mapFlag.compare_exchange_weak(expected, false))
         {  
           generateMsg(&(keyArray[0]), &prevKeyArray[0]);
@@ -360,7 +361,8 @@ void CAN_RX_Task(void* pvParameters){
       local+= 'P';
       if(isMultiple)
       {
-        while(!mapFlag.compare_exchange_weak(expected,false));
+        bool expected = true;
+        while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
         phaseAccMap[msgIn[2] + msgIn[1] * 12] = 0;
         currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
         amplitudeMap[msgIn[2] + msgIn[1] * 12] = std::pair<uint8_t,uint8_t>(64, 0b10);
@@ -378,7 +380,8 @@ void CAN_RX_Task(void* pvParameters){
       local += 'R';
       if(isMultiple)
       {
-        while(!mapFlag.compare_exchange_weak(expected,false));
+        bool expected = true;
+        while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
         if(amplitudeMap.find(msgIn[2] + msgIn[1] * 12) != amplitudeMap.end())
           amplitudeMap[msgIn[2] + msgIn[1] * 12] = std::pair<uint8_t, uint8_t>(amplitudeMap[msgIn[2] + msgIn[1] * 12].first, 0b01);
         mapFlag = true;
