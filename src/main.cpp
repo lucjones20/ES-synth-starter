@@ -8,6 +8,7 @@
 #include <vector>
 #include <ES_CAN.h>
 #include <cmath>
+#include <set>
 // #include "pianoadsr.cpp"
 #include <map>
 
@@ -50,16 +51,14 @@
 
 Knob* volumeKnob;
 Knob* octaveKnob;
+Knob* menuKnob;
 std::string keyPressed;
 uint8_t TX_Message[8];
 struct Note {
     std::string name;
     uint32_t stepSize;
 };
-typedef struct KnobParameters{
-    Knob* volumeKnob;
-    Knob* octaveKnob;
-} KnobParameters;
+
 
 //Maps for sound production:
 std::map<uint8_t, std::atomic<uint32_t>> currentStepMap;
@@ -69,23 +68,8 @@ std::map<uint8_t, std::pair<uint8_t,uint8_t>> amplitudeMap;
 std::atomic<bool> mapFlag;
 
 
-//Recording stuff
-struct Recording{
-  std::vector<std::pair<uint8_t,uint16_t>> keyStrokes;
-  int curIndex = 0;
-  void addKeyStroke(uint8_t index)
-  {
-    if(keyStrokes.size() != 0)
-      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis()) - keyStrokes[keyStrokes.size() - 1].second));
-    else 
-      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis())));
-  }
-};
-HardwareTimer *sampleTimer;
-enum Mode{Solo, MultiMaster, MultiSlave, MultiRecordOn, MutliRecordPlayback};
-std::vector<Recording*> recordings;
-std::atomic<int> recordIndex;
 
+enum Mode{Solo, MultiMaster, MultiSlave, MultiRecordOn, MutliRecordPlayback};
 std::atomic<Mode> control;
 
 //Mutex
@@ -152,6 +136,60 @@ Note stepSizes[12] = {
 
 double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
 
+//Recording stuff
+struct Recording{
+  std::vector<std::pair<uint8_t,uint16_t>> keyStrokes;
+  std::set<uint8_t> pressed;
+  uint32_t lastPressed = 0;
+  int curIndex = 0;
+  void addKeyStroke(uint8_t index)
+  {
+    
+    if(keyStrokes.size() != 0)
+    {
+      
+      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis()) - lastPressed));
+      lastPressed = millis();
+    }
+    else 
+    {
+      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, 0));
+      lastPressed = millis();
+    }
+  }
+  void nextStep()
+  {
+    if(curIndex == keyStrokes.size())
+      curIndex = 0;
+    if(millis() - lastPressed > keyStrokes[curIndex].second)
+    {
+      if(pressed.find(keyStrokes[curIndex].first) != pressed.end())
+      {
+          pressed.erase(keyStrokes[curIndex].first);
+          if(amplitudeMap.find(keyStrokes[curIndex].first) != amplitudeMap.end())
+            amplitudeMap[keyStrokes[curIndex].first] = std::pair<uint8_t, uint8_t>(amplitudeMap[keyStrokes[curIndex].first].first, 0b01);
+      
+      }
+      else
+      {
+        phaseAccMap[keyStrokes[curIndex].first] = 0;
+        amplitudeMap[keyStrokes[curIndex].first] = std::pair<uint8_t,uint8_t>(64, 0b10);
+        currentStepMap[keyStrokes[curIndex].first] = octaveFactors[keyStrokes[curIndex].first/12] * stepSizes[keyStrokes[curIndex].first%12].stepSize;
+        pressed.insert(keyStrokes[curIndex].first);
+      }
+      curIndex++;
+      lastPressed = millis();
+    }
+  }
+
+};
+HardwareTimer *sampleTimer;
+std::vector<Recording*> recordings;
+std::atomic<int> recordIndex;
+bool entered_recording = false;
+bool entered_playback = false;
+
+
 // std::vector<pianoADSR> keyADSR(12);
 //Display driver object
 U8G2_SSD1305_128X32_NONAME_F_HW_I2C u8g2(U8G2_R0);
@@ -167,8 +205,10 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
     delayMicroseconds(2);
     digitalWrite(REN_PIN,LOW);
 }
-void generateMsg(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
+void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 {
+  if(control.load() == MutliRecordPlayback)
+    recordings[recordIndex]->nextStep();
   TX_Message[1] = uint8_t(octaveKnob->getCounter());
   for (int i = 0; i < 3; i++)
     for(int j = 0; j < 4; j++)
@@ -267,7 +307,11 @@ void scanKeysTask(void * pvParameters) {
     const TickType_t xFrequency = 75/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
+   
     while(1){
+        
+          
+        vTaskDelayUntil( &xLastWakeTime, xFrequency );
         for(int i = 0; i < 7; i++){
             // Only 0-2 for now as thats where keys are - will be expanded to 0 - 7
             // Delay for parasitic capacitance
@@ -278,15 +322,37 @@ void scanKeysTask(void * pvParameters) {
             keyArray[i] = readCols();
             xSemaphoreGive(keyArrayMutex);
         }
-        
-        vTaskDelayUntil( &xLastWakeTime, xFrequency );
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
-        octaveKnob->advanceState((keyArray[4] & 0b0001) | (keyArray[4] & 0b0010));
-
+        octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
+        menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
+        switch (menuKnob->getCounter())
+        {
+          case 0:
+            control = Solo;
+            break;
+          case 1:
+            control = MultiMaster;
+            break;
+          case 2:
+            if(!entered_recording)
+            {
+              recordings.push_back(new Recording());
+              recordIndex = recordings.size()-1;
+              entered_recording = true;
+            }
+            control = MultiRecordOn;
+            break;
+          case 3:
+          if(!entered_playback)
+          {
+             
+          }
+            control = MutliRecordPlayback;
+        }
         bool expected = true;
         if(mapFlag.compare_exchange_weak(expected, false))
         {  
-          generateMsg(&(keyArray[0]), &prevKeyArray[0]);
+          processKeys(&(keyArray[0]), &prevKeyArray[0]);
           for(auto ite = amplitudeMap.begin(); ite != amplitudeMap.end(); ite++)
             if(!nextAmplitude(&ite->second))
             {
@@ -302,7 +368,7 @@ void scanKeysTask(void * pvParameters) {
         prevKeyArray[0] = keyArray[0];
         prevKeyArray[1] = keyArray[1];
         prevKeyArray[2] = keyArray[2];
-        xSemaphoreGive(keyArrayMutex);        
+        xSemaphoreGive(keyArrayMutex);    
     }
 }
 
@@ -318,7 +384,9 @@ void displayUpdateTask(void * pvParameters){
         //Update display
         u8g2.clearBuffer();                 // clear the internal memory
         u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-        u8g2.drawStr(2,10,"Helllo Daddy!");    // write something to the internal memory
+        u8g2.setCursor(2,10);
+        u8g2.print("Mode:");
+        u8g2.print(menuKnob->getCounter());   // write something to the internal memory
 
         u8g2.setCursor(2,20);
         for(int i = 0; i < 3; i++){
@@ -424,8 +492,8 @@ void setup() {
     CAN_RegisterRX_ISR(CAN_RX_ISR);
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
-    volumeKnob = new Knob(0,8,5);
-  
+    menuKnob = new Knob(0, 3, 0);
+    
     //Set pin directions
     pinMode(RA0_PIN, OUTPUT);
     pinMode(RA1_PIN, OUTPUT);
@@ -474,7 +542,7 @@ void setup() {
     xTaskCreate(
     displayUpdateTask,		/* Function that implements the task */
     "displayUpdate",		/* Text name for the task */
-    256,      		/* Stack size in words, not bytes */
+    512,      		/* Stack size in words, not bytes */
     NULL,			/* Parameter passed into the task */
     1,			/* Task priority */
     &displayUpdateHandle );	/* Pointer to store the task handle */

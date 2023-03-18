@@ -8,6 +8,7 @@ private:
   uint32_t lowerBound;
   uint32_t upperBound;
   uint8_t prevBA;
+  bool prevUp = true;
   void setCounter(int i)
   {
     if(i == 1 && state.load() < upperBound)
@@ -35,8 +36,17 @@ public:
         switch (currentBA)
         {
           case 0b01:
+            prevUp = true;
             setCounter(1);
             break;
+
+          case 0b11:
+            if(prevUp)
+              setCounter(1);
+            else
+              setCounter(-1);
+            break;
+
           default:
             break;
         }
@@ -45,8 +55,17 @@ public:
         switch (currentBA)
         {
           case 0b00:
+            prevUp = false;
             setCounter(-1);
             break;
+
+          case 0b10:
+            if(prevUp)
+              setCounter(1);
+            else
+              setCounter(-1);
+            break;
+      
           default:
             break;
         }
@@ -54,8 +73,17 @@ public:
         switch (currentBA)
         {
           case 0b11:
+            prevUp = false;
             setCounter(-1);
             break;
+          
+          case 0b01:
+            if(prevUp)
+              setCounter(1);
+            else
+              setCounter(-1);
+            break;
+
           default:
             break;
         }
@@ -63,7 +91,15 @@ public:
         switch (currentBA)
         {
           case 0b10:
+            prevUp = true;
             setCounter(1);
+            break;
+
+          case 0b00:
+            if(prevUp)
+              setCounter(1);
+            else
+              setCounter(-1);
             break;
           default:
             break;
