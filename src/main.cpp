@@ -441,7 +441,9 @@ void CAN_RX_Task(void* pvParameters){
       {
         bool expected = true;
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
-        currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
+        int shift = octaveKnob->getCounter() - 4;
+        // currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
+        currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
         amplitudeAmp[msgIn[2] + msgIn[1] * 12] = 64;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b10;
         mapFlag = true;
