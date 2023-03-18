@@ -14,6 +14,7 @@
 #include "common_structures.cpp"
 // #include "pianoadsr.cpp"
 #include <map>
+#include "menu.cpp"
 
 //Test switches:
 bool disable_blocks = false;
@@ -23,13 +24,6 @@ bool disable_blocks = false;
 // #define TEST_DISPLAY
 // #define TEST_SAMPLEISR
 
-//Test switches:
-bool disable_blocks = false;
-// #define DISABLE_THREADS
-// #define DISABLE_INTERRUPT
-// #define TEST_SCANKEYS
-// #define TEST_DISPLAY
-// #define TEST_SAMPLEISR
 
 
 //Constants
@@ -88,7 +82,6 @@ std::atomic<bool> mapFlag;
 
 
 
-std::atomic<Mode> control;
 
 //Mutex
 SemaphoreHandle_t keyArrayMutex;
@@ -228,7 +221,7 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
 }
 void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 {
-  if(control.load() == MutliRecordPlayback)
+  if(Menu::getMode() == RecordOn)
     nextStepToPlayback(recordings[recordIndex]);
   TX_Message[1] = uint8_t(octaveKnob->getCounter());
   for (int i = 0; i < 3; i++)
@@ -242,7 +235,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         TX_Message[2] = uint8_t(i * 4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
         amplitudeState[octaveKnob->getCounter() * 12 + i * 4 + j] = 0b01;
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
             addKeyStrokeToRecording(recordings[recordIndex],TX_Message[2] + TX_Message[1]*12);
@@ -259,7 +252,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         amplitudeState[octaveKnob->getCounter() * 12 + i * 4 + j] = 0b10;
         int shift = octaveKnob->getCounter() - 4;
         currentStepMap[octaveKnob->getCounter() * 12 + i * 4 + j] = (shift >= 0) ? (stepSizes[i *4 + j].stepSize << shift) : (stepSizes[i *4 + j].stepSize >> abs(shift));
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
             addKeyStrokeToRecording(recordings[recordIndex], TX_Message[2] + TX_Message[1]*12);
@@ -321,7 +314,14 @@ uint8_t readCols(){
 
 	return result;
 }
-
+JoyStickState readJoystick()
+{
+  uint8_t x = analogRead(JOYX_PIN);
+  uint8_t y = analogRead(JOYY_PIN);
+  Serial.println(x);
+  Serial.println(y);
+  return Middle;
+}
 
 volatile uint8_t keyArray[7];
 void scanKeysTask(void * pvParameters) {
@@ -346,30 +346,8 @@ void scanKeysTask(void * pvParameters) {
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
         menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
-        switch (menuKnob->getCounter())
-        {
-          case 0:
-            control = Solo;
-            break;
-          case 1:
-            control = MultiMaster;
-            break;
-          case 2:
-            if(!entered_recording)
-            {
-              recordings.push_back(new Recording());
-              recordIndex = recordings.size()-1;
-              entered_recording = true;
-            }
-            control = MultiRecordOn;
-            break;
-          case 3:
-          if(!entered_playback)
-          {
-             
-          }
-            control = MutliRecordPlayback;
-        }
+        xSemaphoreTake(recordMutex, portMAX_DELAY);
+        Menu::updateMenu(readJoystick(), menuKnob->getCounter());
         bool expected = true;
         if(mapFlag.compare_exchange_weak(expected, false))
         {  
@@ -458,7 +436,7 @@ void CAN_RX_Task(void* pvParameters){
         amplitudeAmp[msgIn[2] + msgIn[1] * 12] = 64;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b10;
         mapFlag = true;
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
             addKeyStrokeToRecording(recordings[recordIndex],msgIn[2] + msgIn[1]*12);
@@ -475,7 +453,7 @@ void CAN_RX_Task(void* pvParameters){
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b01;
         mapFlag = true;
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
             addKeyStrokeToRecording(recordings[recordIndex], msgIn[2] + msgIn[1]*12);
@@ -501,7 +479,7 @@ void CAN_RX_ISR (void) {
 void setup() {
     // put your setup code here, to run once:
     mapFlag = true;
-    control = Solo;
+    Menu::setupMen(&recordings);
     CAN_Init(!isMultiple);
     setCANFilter(0x123,0x7ff);
     CAN_Start();
