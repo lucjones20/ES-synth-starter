@@ -1,3 +1,5 @@
+#ifndef main_cpp
+#define main_cpp
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <STM32FreeRTOS.h>
@@ -9,8 +11,17 @@
 #include <ES_CAN.h>
 #include <cmath>
 #include <set>
+#include "common_structures.cpp"
 // #include "pianoadsr.cpp"
 #include <map>
+
+//Test switches:
+bool disable_blocks = false;
+// #define DISABLE_THREADS
+// #define DISABLE_INTERRUPT
+// #define TEST_SCANKEYS
+// #define TEST_DISPLAY
+// #define TEST_SAMPLEISR
 
 //Test switches:
 bool disable_blocks = false;
@@ -76,7 +87,7 @@ std::atomic<bool> mapFlag;
 
 
 
-enum Mode{Solo, MultiMaster, MultiSlave, MultiRecordOn, MutliRecordPlayback};
+
 std::atomic<Mode> control;
 
 //Mutex
@@ -144,57 +155,57 @@ Note stepSizes[12] = {
 double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
 
 //Recording stuff
-struct Recording{
-  std::vector<std::pair<uint8_t,uint16_t>> keyStrokes;
-  std::set<uint8_t> pressed;
-  uint32_t lastPressed = 0;
-  int curIndex = 0;
-  void addKeyStroke(uint8_t index)
+
+void addKeyStrokeToRecording(Recording* rec,uint8_t index)
   {
     
-    if(keyStrokes.size() != 0)
+    if(rec->keyStrokes.size() != 0)
     {
       
-      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis()) - lastPressed));
-      lastPressed = millis();
+      rec->keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis()) - rec->lastPressed));
+      rec->lastPressed = millis();
     }
     else 
     {
-      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, 0));
-      lastPressed = millis();
+      rec->keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, 0));
+      rec->lastPressed = millis();
     }
   }
-  void nextStep()
+
+void nextStepToPlayback(Recording* rec)
   {
     
-    if(curIndex == keyStrokes.size())
-      curIndex = 0;
 
-    int shift = keyStrokes[curIndex].first/12 - 4;
+    if(rec->curIndex == rec->keyStrokes.size())
+      rec->curIndex = 0;
+
+    int shift = rec->keyStrokes[rec->curIndex].first/12 - 4;
     
-    if(millis() - lastPressed > keyStrokes[curIndex].second)
+    if(millis() - rec->lastPressed > rec->keyStrokes[rec->curIndex].second)
     {
-      if(pressed.find(keyStrokes[curIndex].first) != pressed.end())
+      if(rec->pressed.find(rec->keyStrokes[rec->curIndex].first) != rec->pressed.end())
       {
-        pressed.erase(keyStrokes[curIndex].first);
-        amplitudeState[keyStrokes[curIndex].first] = 0b01;
+
+        rec->pressed.erase(rec->keyStrokes[rec->curIndex].first);
+        amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b01;
+
       
       }
       else
       {
-        amplitudeAmp[keyStrokes[curIndex].first] = 64;
-        amplitudeState[keyStrokes[curIndex].first] = 0b10;
-        currentStepMap[keyStrokes[curIndex].first] = (shift >= 0) ? (stepSizes[keyStrokes[curIndex].first%12].stepSize << shift) : (stepSizes[keyStrokes[curIndex].first%12].stepSize >> abs(shift));
-        pressed.insert(keyStrokes[curIndex].first);
+
+        amplitudeAmp[rec->keyStrokes[rec->curIndex].first] = 64;
+        amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b10;
+        currentStepMap[rec->keyStrokes[rec->curIndex].first] = (shift >= 0) ? (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize << shift) : (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize >> abs(shift));
+        rec->pressed.insert(rec->keyStrokes[rec->curIndex].first);
       }
-      curIndex++;
-      lastPressed = millis();
+      rec->curIndex++;
+      rec->lastPressed = millis();
     }
   }
-
-};
-HardwareTimer *sampleTimer;
 std::vector<Recording*> recordings;
+static void addRecording(){recordings.push_back(new Recording());}
+HardwareTimer *sampleTimer;
 std::atomic<int> recordIndex;
 bool entered_recording = false;
 bool entered_playback = false;
@@ -218,7 +229,7 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
 void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 {
   if(control.load() == MutliRecordPlayback)
-    recordings[recordIndex]->nextStep();
+    nextStepToPlayback(recordings[recordIndex]);
   TX_Message[1] = uint8_t(octaveKnob->getCounter());
   for (int i = 0; i < 3; i++)
     for(int j = 0; j < 4; j++)
@@ -234,7 +245,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         if(control.load() == MultiRecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(TX_Message[2] + TX_Message[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex],TX_Message[2] + TX_Message[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
@@ -251,7 +262,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         if(control.load() == MultiRecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(TX_Message[2] + TX_Message[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex], TX_Message[2] + TX_Message[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
@@ -450,7 +461,7 @@ void CAN_RX_Task(void* pvParameters){
         if(control.load() == MultiRecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(msgIn[2] + msgIn[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex],msgIn[2] + msgIn[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
@@ -467,7 +478,7 @@ void CAN_RX_Task(void* pvParameters){
         if(control.load() == MultiRecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(msgIn[2] + msgIn[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex], msgIn[2] + msgIn[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
@@ -617,3 +628,4 @@ void setup() {
 
 void loop() {
 }
+#endif
