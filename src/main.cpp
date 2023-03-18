@@ -11,6 +11,9 @@
 #include <set>
 // #include "pianoadsr.cpp"
 #include <map>
+#include <main.hpp>
+#include <algorithm>
+
 
 //Test switches:
 bool disable_blocks = false;
@@ -59,12 +62,10 @@ bool disable_blocks = false;
 Knob* volumeKnob;
 Knob* octaveKnob;
 Knob* menuKnob;
+Knob* waveformKnob;
 std::string keyPressed;
 uint8_t TX_Message[8];
-struct Note {
-    std::string name;
-    uint32_t stepSize;
-};
+
 
 
 //Maps for sound production:
@@ -110,9 +111,7 @@ bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
 }
 
 
-int fs = 22000;
-int f = 440;
-double factor = 1.05946309436;
+
 // const Note stepSizes[12] = {
 Note stepSizes[12] = {
     // C
@@ -258,15 +257,53 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
     }
 }
 
+SineArray* sineArray;
 volatile uint32_t array[108];
+volatile int triangleCoeff[88];
 void sampleISR() {
+  static int sineCounter[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
   int16_t Vout = 0;
   bool expected = true;
   if(mapFlag.compare_exchange_weak(expected, false))
   {
     for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
     {
-      phaseAccArray[it->first] += it->second;
+      if(waveformKnob->getCounter()==1){
+        switch(octaveKnob->getCounter()){
+          case 1:
+            phaseAccArray[it->first] = sineArray->octave1[it->first%12][(sineCounter[it->first%12]++)%400]; 
+            break;
+          case 2:
+            phaseAccArray[it->first] = sineArray->octave2[it->first%12][(sineCounter[it->first%12]++)%200]; 
+            break;
+          case 3:
+            phaseAccArray[it->first] = sineArray->octave3[it->first%12][(sineCounter[it->first%12]++)%100]; 
+            break;            
+          case 4:
+            phaseAccArray[it->first] = sineArray->octave4[it->first%12][(sineCounter[it->first%12]++)%50]; 
+            break;
+          case 5:
+            phaseAccArray[it->first] = sineArray->octave5[it->first%12][(sineCounter[it->first%12]++)%25]; 
+            break;
+          case 6:
+            phaseAccArray[it->first] = sineArray->octave6[it->first%12][(sineCounter[it->first%12]++)%13]; 
+          case 7:
+            phaseAccArray[it->first] = sineArray->octave6[it->first%12][(sineCounter[it->first%12]++)%7]; 
+            break;
+        }
+      }
+      else if(waveformKnob->getCounter()==2){
+        if(phaseAccArray[it->first] + triangleCoeff[it->first] * 2 * it->second < phaseAccArray[it->first]){
+          triangleCoeff[it->first] = -1;
+        }
+        else{
+          triangleCoeff[it->first] = 1;
+        }
+        phaseAccArray[it->first] += triangleCoeff[it->first] * 2 * it->second;
+      }
+      else{
+        phaseAccArray[it->first] += it->second;
+      }
       Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
     }
     mapFlag = true;
@@ -335,6 +372,7 @@ void scanKeysTask(void * pvParameters) {
         xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
         menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
+        waveformKnob->advanceState((keyArray[4] & 0b0100 | keyArray[3] & 0b1000) >> 2);
         switch (menuKnob->getCounter())
         {
           case 0:
@@ -397,6 +435,9 @@ void displayUpdateTask(void * pvParameters){
         u8g2.setCursor(2,10);
         u8g2.print("Mode:");
         u8g2.print(menuKnob->getCounter());   // write something to the internal memory
+
+        u8g2.print("    Waveform:");
+        u8g2.print(waveformKnob->getCounter());
 
         u8g2.setCursor(2,20);
         for(int i = 0; i < 3; i++){
@@ -507,6 +548,8 @@ void setup() {
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
     menuKnob = new Knob(0, 3, 0);
+    waveformKnob = new Knob(0,2,1);
+    std::fill_n(triangleCoeff, 88, 1);
     
     //Set pin directions
     pinMode(RA0_PIN, OUTPUT);
@@ -544,6 +587,8 @@ void setup() {
     //Initialise UART
     Serial.begin(9600);
     Serial.println("Hello World");
+
+    initSineArray(sineArray);
 
     #ifndef DISABLE_THREADS
     TaskHandle_t scanKeysHandle = NULL;
