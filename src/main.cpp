@@ -15,6 +15,13 @@
 // #include "pianoadsr.cpp"
 #include <map>
 
+//Test switches:
+bool disable_blocks = false;
+// #define DISABLE_THREADS
+// #define DISABLE_INTERRUPT
+// #define TEST_SCANKEYS
+// #define TEST_DISPLAY
+// #define TEST_SAMPLEISR
 
 //Test switches:
 bool disable_blocks = false;
@@ -73,9 +80,9 @@ struct Note {
 
 //Maps for sound production:
 std::map<uint8_t, std::atomic<uint32_t>> currentStepMap;
-std::map<uint8_t, uint32_t> phaseAccMap;
-std::map<uint8_t, std::atomic<uint32_t>>::iterator it;
-std::map<uint8_t, std::pair<uint8_t,uint8_t>> amplitudeMap;
+volatile uint32_t phaseAccArray[96];
+volatile uint8_t amplitudeState[96];
+volatile uint8_t amplitudeAmp[96];
 std::atomic<bool> mapFlag;
 
 
@@ -94,19 +101,19 @@ QueueHandle_t msgInQ;
 bool isMultiple = false;
 
 
-bool nextAmplitude(std::pair<uint8_t,uint8_t>* _state){
-  switch (_state->second)
+bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
+  switch (*state)
   {
     case 0b10:
-      _state->second = 0b11;
+      *state = 0b11;
       return true;
     case 0b11:
-      if(_state->first <= 10) return false;
-      else _state->first -= 2;
+      if(*amplitude <= 10) return false;
+      else *amplitude -= 2;
       break;
     case 0b01:
-      if(_state->first <= 10 || _state->first > 64) return false;
-      else _state->first -= 6;
+      if(*amplitude <= 10 || *amplitude > 64) return false;
+      else *amplitude -= 6;
       break;
     default: break;
   }
@@ -168,6 +175,7 @@ void addKeyStrokeToRecording(Recording* rec,uint8_t index)
 void nextStepToPlayback(Recording* rec)
   {
     
+
     if(rec->curIndex == rec->keyStrokes.size())
       rec->curIndex = 0;
 
@@ -177,12 +185,15 @@ void nextStepToPlayback(Recording* rec)
     {
       if(rec->pressed.find(rec->keyStrokes[rec->curIndex].first) != rec->pressed.end())
       {
+
         rec->pressed.erase(rec->keyStrokes[rec->curIndex].first);
         amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b01;
+
       
       }
       else
       {
+
         amplitudeAmp[rec->keyStrokes[rec->curIndex].first] = 64;
         amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b10;
         currentStepMap[rec->keyStrokes[rec->curIndex].first] = (shift >= 0) ? (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize << shift) : (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize >> abs(shift));
@@ -230,8 +241,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         TX_Message[0] = 'R';
         TX_Message[2] = uint8_t(i * 4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
-        if(amplitudeMap.find(octaveKnob->getCounter() * 12 + i * 4 + j) != amplitudeMap.end())
-          amplitudeMap[octaveKnob->getCounter() * 12 + i * 4 + j] = std::pair<uint8_t,uint8_t>(amplitudeMap[octaveKnob->getCounter() * 12 + i * 4 + j].first, 0b01);
+        amplitudeState[octaveKnob->getCounter() * 12 + i * 4 + j] = 0b01;
         if(control.load() == MultiRecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
@@ -245,9 +255,10 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         TX_Message[0] = 'P';
         TX_Message[2] = uint8_t(i *4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
-        phaseAccMap[octaveKnob->getCounter() *12 + i *4 + j] = 0;
-        amplitudeMap[octaveKnob->getCounter() * 12 + i * 4 + j] = std::pair<uint8_t,uint8_t>(64, 0b10);
-        currentStepMap[octaveKnob->getCounter() * 12 + i * 4 + j] = octaveFactors[octaveKnob->getCounter()] * stepSizes[i *4 + j].stepSize;
+        amplitudeAmp[octaveKnob->getCounter() * 12 + i * 4 + j] = 64;
+        amplitudeState[octaveKnob->getCounter() * 12 + i * 4 + j] = 0b10;
+        int shift = octaveKnob->getCounter() - 4;
+        currentStepMap[octaveKnob->getCounter() * 12 + i * 4 + j] = (shift >= 0) ? (stepSizes[i *4 + j].stepSize << shift) : (stepSizes[i *4 + j].stepSize >> abs(shift));
         if(control.load() == MultiRecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
@@ -258,16 +269,16 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
     }
 }
 
-
+volatile uint32_t array[108];
 void sampleISR() {
   int16_t Vout = 0;
   bool expected = true;
   if(mapFlag.compare_exchange_weak(expected, false))
   {
-    for(it = currentStepMap.begin(); it != currentStepMap.end(); it++)
+    for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
     {
-      phaseAccMap[it->first] += it->second;
-      Vout += ((phaseAccMap[it->first] >> 24))*((float)(amplitudeMap[it->first].first)/64)-128;
+      phaseAccArray[it->first] += it->second;
+      Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
     }
     mapFlag = true;
     Vout = Vout >> (8 - volumeKnob->getCounter());
@@ -317,11 +328,11 @@ void scanKeysTask(void * pvParameters) {
     const TickType_t xFrequency = 75/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
-   
-    while(1){
-        
-          
-        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+    uint8_t analysisCounter = 1;
+    do{
+
+        if(!disable_blocks)  
+          vTaskDelayUntil( &xLastWakeTime, xFrequency );
         for(int i = 0; i < 7; i++){
             // Only 0-2 for now as thats where keys are - will be expanded to 0 - 7
             // Delay for parasitic capacitance
@@ -363,15 +374,13 @@ void scanKeysTask(void * pvParameters) {
         if(mapFlag.compare_exchange_weak(expected, false))
         {  
           processKeys(&(keyArray[0]), &prevKeyArray[0]);
-          for(auto ite = amplitudeMap.begin(); ite != amplitudeMap.end(); ite++)
-            if(!nextAmplitude(&ite->second))
+          for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
+          {
+            if(!nextAmplitude(&amplitudeState[it->first], &amplitudeAmp[it->first]))
             {
-              currentStepMap.erase(currentStepMap.find(ite->first));
-              phaseAccMap.erase(phaseAccMap.find(ite->first));
-              ite = amplitudeMap.erase(amplitudeMap.find(ite->first));
-              if(ite == amplitudeMap.end())
-                break;
+              currentStepMap.erase(it);
             }
+          }
           mapFlag = true;
         }
         volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
@@ -379,7 +388,8 @@ void scanKeysTask(void * pvParameters) {
         prevKeyArray[1] = keyArray[1];
         prevKeyArray[2] = keyArray[2];
         xSemaphoreGive(keyArrayMutex);    
-    }
+
+    }while(!disable_blocks);
 }
 
 void displayUpdateTask(void * pvParameters){
@@ -387,9 +397,10 @@ void displayUpdateTask(void * pvParameters){
     const TickType_t xFrequency = 100/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
-    while(1){
+    do{
         uint32_t volume= volumeKnob->getCounter();
-        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+        if(!disable_blocks)
+          vTaskDelayUntil( &xLastWakeTime, xFrequency );
 
         //Update display
         u8g2.clearBuffer();                 // clear the internal memory
@@ -417,20 +428,20 @@ void displayUpdateTask(void * pvParameters){
         //Toggle LED
         digitalToggle(LED_BUILTIN);
 
-    }
+    }while(!disable_blocks);
 }
 
 void CAN_TX_Task (void * pvParameters) {
 	uint8_t msgOut[8];
-	while (1) {
+	do{
 	xQueueReceive(msgOutQ, msgOut, portMAX_DELAY);
 		xSemaphoreTake(CAN_TX_Semaphore, portMAX_DELAY);
 		CAN_TX(0x123, msgOut);
-	}
+	}while(!disable_blocks);
 }
 void CAN_RX_Task(void* pvParameters){
   uint8_t msgIn[8];
-  while(1)
+  do
   {
     xQueueReceive(msgInQ, msgIn, portMAX_DELAY);
     std::string local = "";
@@ -441,9 +452,11 @@ void CAN_RX_Task(void* pvParameters){
       {
         bool expected = true;
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
-        phaseAccMap[msgIn[2] + msgIn[1] * 12] = 0;
-        currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
-        amplitudeMap[msgIn[2] + msgIn[1] * 12] = std::pair<uint8_t,uint8_t>(64, 0b10);
+        int shift = octaveKnob->getCounter() - 4;
+        // currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
+        currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
+        amplitudeAmp[msgIn[2] + msgIn[1] * 12] = 64;
+        amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b10;
         mapFlag = true;
         if(control.load() == MultiRecordOn)
         {
@@ -460,8 +473,7 @@ void CAN_RX_Task(void* pvParameters){
       {
         bool expected = true;
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
-        if(amplitudeMap.find(msgIn[2] + msgIn[1] * 12) != amplitudeMap.end())
-          amplitudeMap[msgIn[2] + msgIn[1] * 12] = std::pair<uint8_t, uint8_t>(amplitudeMap[msgIn[2] + msgIn[1] * 12].first, 0b01);
+        amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b01;
         mapFlag = true;
         if(control.load() == MultiRecordOn)
         {
@@ -474,7 +486,7 @@ void CAN_RX_Task(void* pvParameters){
     }
     local += ", Note" + std::to_string(msgIn[2]);
     keyPressed = local;
-  }
+  }while(!disable_blocks);
 }
 void CAN_TX_ISR (void) {
 	xSemaphoreGiveFromISR(CAN_TX_Semaphore, NULL);
@@ -495,7 +507,12 @@ void setup() {
     CAN_Start();
     keyArrayMutex = xSemaphoreCreateMutex();
     recordMutex = xSemaphoreCreateMutex();
+    #ifndef TEST_SCANKEYS
     msgOutQ = xQueueCreate(36,8);
+    #endif
+    #ifdef TEST_SCANKEYS
+    msgOutQ = xQueueCreate(384,8);
+    #endif
     msgInQ = xQueueCreate(36,8);
     CAN_TX_Semaphore = xSemaphoreCreateCounting(3,3);
     CAN_RegisterTX_ISR(CAN_TX_ISR);
@@ -529,16 +546,19 @@ void setup() {
     setOutMuxBit(DEN_BIT, HIGH);    //Enable display power supply
 
     //Timer to trigger interrupt (sampleISR() function)
+    #ifndef DISABLE_INTERRUPT
     TIM_TypeDef *Instance = TIM1;
     HardwareTimer *sampleTimer = new HardwareTimer(Instance);
     sampleTimer->setOverflow(22000, HERTZ_FORMAT);
     sampleTimer->attachInterrupt(sampleISR);
     sampleTimer->resume();
+    #endif
     
     //Initialise UART
     Serial.begin(9600);
     Serial.println("Hello World");
 
+    #ifndef DISABLE_THREADS
     TaskHandle_t scanKeysHandle = NULL;
     xTaskCreate(
     scanKeysTask,		/* Function that implements the task */
@@ -552,7 +572,7 @@ void setup() {
     xTaskCreate(
     displayUpdateTask,		/* Function that implements the task */
     "displayUpdate",		/* Text name for the task */
-    512,      		/* Stack size in words, not bytes */
+    256,      		/* Stack size in words, not bytes */
     NULL,			/* Parameter passed into the task */
     1,			/* Task priority */
     &displayUpdateHandle );	/* Pointer to store the task handle */
@@ -572,8 +592,35 @@ void setup() {
       NULL,
       5,
       &CAN_RXTask);
+      vTaskStartScheduler();
+      #endif
 
-    vTaskStartScheduler();
+      #ifdef TEST_SCANKEYS
+        uint32_t startTime = micros();
+        for (int iter = 0; iter < 32; iter++) {
+          scanKeysTask(NULL);
+        }
+        Serial.println(micros()-startTime);
+        while(1);
+      #endif
+      #ifdef TEST_DISPLAY
+        uint32_t startTime = micros();
+        for (int iter = 0; iter < 32; iter++) {
+          displayUpdateTask(NULL);
+        }
+        Serial.println(micros()-startTime);
+        while(1);
+      #endif
+      #ifdef TEST_SAMPLEISR
+        
+        scanKeysTask(NULL);
+        uint32_t startTime = micros();
+        for (int iter = 0; iter < 32; iter++) {
+          sampleISR();
+        }
+        Serial.println(micros()-startTime);
+        while(1); 
+      #endif
 }
 
 
