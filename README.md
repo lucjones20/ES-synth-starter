@@ -1,10 +1,26 @@
-# ES-synth-starter
+DOCUMENTATION
+=============================
 
-  Use this project as the starting point for your Embedded Systems labs and coursework.
-  
-  [Lab Part 1](doc/LabPart1.md)
-  
-  [Lab Part 2](doc/LabPart2.md)
+Table of Contents
+-----------------------------
 
-## Additional Information
-  [Handshaking and auto-detection](doc/handshaking.md)
+1. [Introduction](#introduction)
+2. [Features](#features)
+3. [Tasks](#tasks)  
+    3.1. [scanKeyTask](#scankeytask)  
+    3.2. [displayUpdateTask]
+ 4. [Analysis](#analysis)
+
+##  Introduction
+
+## Tasks
+### ScanKeyTask
+The ScanKeyTask function is responsible for reading the key matrix
+
+## Analysis
+
+ScanKeyTask: 10820 / 32 = 321 micros
+
+displayUpdateTask: 554261 / 32 = 17 320 micros
+
+sampleISR: 689 / 32 = 21.5 micros 
