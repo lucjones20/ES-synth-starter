@@ -8,11 +8,12 @@
 class Menu
 {
 private:
-    static bool newRecord;
-    static bool onLoop;
-    static std::atomic<Mode> controlMode;
-    static std::vector<Recording*>* recs;
-    static std::atomic<uint8_t> recIndex;
+    inline static bool newRecord;
+    inline static bool onLoop;
+    inline static std::atomic<Mode> controlMode;
+    inline static std::vector<Recording*>* recs;
+    inline static std::atomic<uint8_t> recIndex;
+    inline static int prevCounter;
     static void resetVars()
     {
         Menu::newRecord = false;
@@ -44,72 +45,95 @@ public:
         Menu::recs = r;
         Menu::newRecord = false;
         Menu::onLoop = false;
+        prevCounter = 0;
     }
-    static void updateMenu(JoyStickState joy, uint8_t selectMode) //1. is it confirm, 2. is it cancel, 3. go up, 4 switch mode, 5 change volume, 6 change octave
+    static void updateMenu(bool yes, bool no, bool extraButt1, bool extraButt2, uint32_t selectMode) //1. is it confirm, 2. is it cancel, 3. go up, 4 switch mode, 5 change volume, 6 change octave
     {
-        switch(selectMode)
-        {
-            case 0: 
-                Menu::controlMode = Normal;
-                break;
-            case 1:
-                if(Menu::controlMode == RecordOff)
-                {
-                    if(joy == Up && !newRecord)
+            if(controlMode.load() != Servant)
+            {
+            if(recs->size() == 0 && selectMode == 2)
+                selectMode = 0;
+            switch(selectMode)
+            {
+                case (uint32_t)0: 
+                    Menu::controlMode = Normal;
+                    break;
+                case (uint32_t)1:
+                    if(Menu::controlMode.load() == RecordOff)
                     {
-                        Menu::recs->push_back(new Recording());
-                        Menu::recIndex = recs->size()-1;
-                        Menu::newRecord = true;
-                        Menu::controlMode = RecordOn;
+                        if(yes && !newRecord)
+                        {
+                            Menu::recs->push_back(new Recording());
+                            Menu::recIndex = recs->size()-1;
+                            Menu::newRecord = true;
+                            Menu::controlMode = RecordOn;
+                        }
+                        else if(yes)
+                        {
+                            Menu::controlMode = RecordOn;
+                        }
+                        else
+                        {
+                            controlMode = RecordOff;
+                        }
                     }
-                    else if(joy == Up)
+                    else if(Menu::controlMode.load() == RecordOn)
                     {
-                        Menu::controlMode = RecordOn;
-                    }  
-                }
-                else if(Menu::controlMode == RecordOn)
-                {
-                    if(joy == Up)
-                        Menu::controlMode = RecordOff;
-                    if(joy == Down)
+                        if(extraButt1)
+                            Menu::controlMode = RecordOff;
+                        else if(no)
+                        {
+                            Menu::newRecord = false;
+                            Menu::controlMode = RecordOff;
+                        }
+                        else
+                        {
+                            controlMode = RecordOn;
+                        }
+                    }
+                    else
                     {
-                        Menu::newRecord = false;
+                        resetVars();
                         Menu::controlMode = RecordOff;
                     }
-                }
-                else
-                {
-                    resetVars();
-                    Menu::controlMode == RecordOff;
-                }
-                break;
-            case 2:
-                if(Menu::controlMode == PlaybackOff)
-                {
-                    if(joy == Left)
-                        Menu::decreaseRecIndex();
-                    else if(joy == Right)
-                        Menu::increaseRecIndex();
-                    else if(joy == Up)
-                        Menu::controlMode = PlaybackOn;
-                    else if(joy == Down)
-                        Menu::onLoop = false;
-                }
-                if(Menu::controlMode == PlaybackOn)
-                {
-                    if(joy == Down)
+                    break;
+                case (uint32_t)2:
+                    if(Menu::controlMode.load() == PlaybackOff)
+                    {
+                        if(extraButt1 && prevCounter == 0)
+                            decreaseRecIndex();
+                        else if(prevCounter == 100 || prevCounter ==0)
+                            prevCounter = 0;
+                        else
+                            prevCounter++;
+                        if(extraButt2 && prevCounter == 0 )
+                            increaseRecIndex();
+                        else if(prevCounter == 100 || prevCounter ==0)
+                            prevCounter = 0;
+                        if(yes)
+                            Menu::controlMode = PlaybackOn;
+                        if(!extraButt1 && !extraButt2)
+                            prevCounter = 0;
+                    }
+                    else if(Menu::controlMode.load() == PlaybackOn)
+                    {
+                        if(no)
+                            Menu::controlMode = PlaybackOff;
+                    }
+                    else
+                    {
+                        resetVars();
                         Menu::controlMode = PlaybackOff;
-                }
-                else
-                {
-                    resetVars();
-                    Menu::controlMode = PlaybackOff;
-                }
-
-                
+                    }
+                    break;
+                default: break;
+                    
+            }
         }
 
     }
     static Mode getMode(){return Menu::controlMode.load();}
+    static int getRecordIndex(){return recIndex.load();}
+    static void setToServant(){controlMode = Servant;}
 };
 #endif
