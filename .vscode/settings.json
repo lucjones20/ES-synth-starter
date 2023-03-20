@@ -53,5 +53,9 @@
         "map": "cpp",
         "set": "cpp"
     },
+<<<<<<< HEAD
     "C_Cpp.errorSquiggles": "disabled"
+=======
+    "cmake.configureOnOpen": false
+>>>>>>> 40eb7c1000aef58538176f3222aa644aaefc2cba
 }

@@ -19,7 +19,7 @@ The ScanKeyTask function is responsible for reading the key matrix
 
 ## Analysis
 
-ScanKeyTask: 10820 / 32 = 321 micros
+ScanKeyTask: 8430 / 32 = 263 micros
 
 displayUpdateTask: 554261 / 32 = 17 320 micros
 

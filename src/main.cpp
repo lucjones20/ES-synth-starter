@@ -1,3 +1,5 @@
+#ifndef main_cpp
+#define main_cpp
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <STM32FreeRTOS.h>
@@ -14,14 +16,16 @@
 #include <main.hpp>
 #include <algorithm>
 
+#include "menu.cpp"
 
 //Test switches:
 bool disable_blocks = false;
-// #define DISABLE_THREADS
-// #define DISABLE_INTERRUPT
-// #define TEST_SCANKEYS
+//#define DISABLE_THREADS
+//#define DISABLE_INTERRUPT
+//#define TEST_SCANKEYS
 // #define TEST_DISPLAY
 // #define TEST_SAMPLEISR
+
 
 
 //Constants
@@ -77,8 +81,7 @@ std::atomic<bool> mapFlag;
 
 
 
-enum Mode{Solo, MultiMaster, MultiSlave, MultiRecordOn, MutliRecordPlayback};
-std::atomic<Mode> control;
+
 
 //Mutex
 SemaphoreHandle_t keyArrayMutex;
@@ -143,57 +146,57 @@ Note stepSizes[12] = {
 double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
 
 //Recording stuff
-struct Recording{
-  std::vector<std::pair<uint8_t,uint16_t>> keyStrokes;
-  std::set<uint8_t> pressed;
-  uint32_t lastPressed = 0;
-  int curIndex = 0;
-  void addKeyStroke(uint8_t index)
+
+void addKeyStrokeToRecording(Recording* rec,uint8_t index)
   {
     
-    if(keyStrokes.size() != 0)
+    if(rec->keyStrokes.size() != 0)
     {
       
-      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis()) - lastPressed));
-      lastPressed = millis();
+      rec->keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, uint16_t(millis()) - rec->lastPressed));
+      rec->lastPressed = millis();
     }
     else 
     {
-      keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, 0));
-      lastPressed = millis();
+      rec->keyStrokes.push_back(std::pair<uint8_t,uint16_t>(index, 0));
+      rec->lastPressed = millis();
     }
   }
-  void nextStep()
+
+void nextStepToPlayback(Recording* rec)
   {
     
-    if(curIndex == keyStrokes.size())
-      curIndex = 0;
 
-    int shift = keyStrokes[curIndex].first/12 - 4;
+    if(rec->curIndex == rec->keyStrokes.size())
+      rec->curIndex = 0;
+
+    int shift = rec->keyStrokes[rec->curIndex].first/12 - 4;
     
-    if(millis() - lastPressed > keyStrokes[curIndex].second)
+    if(millis() - rec->lastPressed > rec->keyStrokes[rec->curIndex].second)
     {
-      if(pressed.find(keyStrokes[curIndex].first) != pressed.end())
+      if(rec->pressed.find(rec->keyStrokes[rec->curIndex].first) != rec->pressed.end())
       {
-        pressed.erase(keyStrokes[curIndex].first);
-        amplitudeState[keyStrokes[curIndex].first] = 0b01;
+
+        rec->pressed.erase(rec->keyStrokes[rec->curIndex].first);
+        amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b01;
+
       
       }
       else
       {
-        amplitudeAmp[keyStrokes[curIndex].first] = 64;
-        amplitudeState[keyStrokes[curIndex].first] = 0b10;
-        currentStepMap[keyStrokes[curIndex].first] = (shift >= 0) ? (stepSizes[keyStrokes[curIndex].first%12].stepSize << shift) : (stepSizes[keyStrokes[curIndex].first%12].stepSize >> abs(shift));
-        pressed.insert(keyStrokes[curIndex].first);
+
+        amplitudeAmp[rec->keyStrokes[rec->curIndex].first] = 64;
+        amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b10;
+        currentStepMap[rec->keyStrokes[rec->curIndex].first] = (shift >= 0) ? (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize << shift) : (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize >> abs(shift));
+        rec->pressed.insert(rec->keyStrokes[rec->curIndex].first);
       }
-      curIndex++;
-      lastPressed = millis();
+      rec->curIndex++;
+      rec->lastPressed = millis();
     }
   }
-
-};
-HardwareTimer *sampleTimer;
 std::vector<Recording*> recordings;
+static void addRecording(){recordings.push_back(new Recording());}
+HardwareTimer *sampleTimer;
 std::atomic<int> recordIndex;
 bool entered_recording = false;
 bool entered_playback = false;
@@ -216,8 +219,8 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
 }
 void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 {
-  if(control.load() == MutliRecordPlayback)
-    recordings[recordIndex]->nextStep();
+  if(Menu::getMode() == PlaybackOn)
+    nextStepToPlayback(recordings[recordIndex]);
   TX_Message[1] = uint8_t(octaveKnob->getCounter());
   for (int i = 0; i < 3; i++)
     for(int j = 0; j < 4; j++)
@@ -230,10 +233,10 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         TX_Message[2] = uint8_t(i * 4 + j);
         xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
         amplitudeState[octaveKnob->getCounter() * 12 + i * 4 + j] = 0b01;
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(TX_Message[2] + TX_Message[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex],TX_Message[2] + TX_Message[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
@@ -247,10 +250,10 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         amplitudeState[octaveKnob->getCounter() * 12 + i * 4 + j] = 0b10;
         int shift = octaveKnob->getCounter() - 4;
         currentStepMap[octaveKnob->getCounter() * 12 + i * 4 + j] = (shift >= 0) ? (stepSizes[i *4 + j].stepSize << shift) : (stepSizes[i *4 + j].stepSize >> abs(shift));
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(TX_Message[2] + TX_Message[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex], TX_Message[2] + TX_Message[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
@@ -347,7 +350,10 @@ uint8_t readCols(){
 
 	return result;
 }
-
+JoyStickState readJoystick()
+{
+  return Middle;
+}
 
 volatile uint8_t keyArray[7];
 void scanKeysTask(void * pvParameters) {
@@ -373,29 +379,11 @@ void scanKeysTask(void * pvParameters) {
         octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
         menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
         waveformKnob->advanceState((keyArray[4] & 0b0100 | keyArray[3] & 0b1000) >> 2);
-        switch (menuKnob->getCounter())
+        if(Menu::getMode() != Servant)
         {
-          case 0:
-            control = Solo;
-            break;
-          case 1:
-            control = MultiMaster;
-            break;
-          case 2:
-            if(!entered_recording)
-            {
-              recordings.push_back(new Recording());
-              recordIndex = recordings.size()-1;
-              entered_recording = true;
-            }
-            control = MultiRecordOn;
-            break;
-          case 3:
-          if(!entered_playback)
-          {
-             
-          }
-            control = MutliRecordPlayback;
+          octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
+          menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
+          volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
         }
         bool expected = true;
         if(mapFlag.compare_exchange_weak(expected, false))
@@ -410,10 +398,12 @@ void scanKeysTask(void * pvParameters) {
           }
           mapFlag = true;
         }
-        volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
+        
         prevKeyArray[0] = keyArray[0];
         prevKeyArray[1] = keyArray[1];
         prevKeyArray[2] = keyArray[2];
+        Menu::updateMenu(!(keyArray[6] & 0b1), !(keyArray[6] & 0b10), !(keyArray[5] & 0b1), !(keyArray[5] & 0b10), menuKnob->getCounter());
+        recordIndex = Menu::getRecordIndex();
         xSemaphoreGive(keyArrayMutex);    
 
     }while(!disable_blocks);
@@ -434,24 +424,66 @@ void displayUpdateTask(void * pvParameters){
         u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
         u8g2.setCursor(2,10);
         u8g2.print("Mode:");
-        u8g2.print(menuKnob->getCounter());   // write something to the internal memory
+        switch(Menu::getMode())
+        {
+          case Normal:
+            u8g2.print("Normal");
+            xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
+            u8g2.setCursor(2,20);
+            for(int i = 0; i < 3; i++){
+                u8g2.print(keyArray[i],HEX);
+            }
+            xSemaphoreGive(keyArrayMutex);
+            break;
+          case RecordOff:
+            u8g2.print("RecOff");
+            u8g2.setCursor(5,20);
+            u8g2.print("Track:");
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            u8g2.print(recordIndex.load());
+            xSemaphoreGive(recordMutex);
+            break;
+          case RecordOn:
+            u8g2.print("RecOn");
+            u8g2.setCursor(5,20);
+            u8g2.print("Track:");
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            u8g2.print(recordIndex.load());
+            u8g2.print("     Pressed:");
+            u8g2.print(recordings[recordIndex]->keyStrokes.size());
+            xSemaphoreGive(recordMutex);
+            break;
+          case PlaybackOff:
+            u8g2.print("PlayOff");
+            u8g2.setCursor(5,20);
+            u8g2.print("Track:");
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            u8g2.print(recordIndex.load());
+            u8g2.print("/");
+            u8g2.print(recordings.size()-1);
+            xSemaphoreGive(recordMutex);
+            break;
+          case PlaybackOn:
+            u8g2.print("PlayOn");
+            u8g2.setCursor(5,20);
+            u8g2.print("Track:");
+            xSemaphoreTake(recordMutex, portMAX_DELAY);
+            u8g2.print(recordIndex.load());
+            xSemaphoreGive(recordMutex);
+        }   // write something to the internal memory
 
-        u8g2.print("    Waveform:");
+        
+        u8g2.setCursor(50,30);
+        u8g2.print("W");
         u8g2.print(waveformKnob->getCounter());
-
-        u8g2.setCursor(2,20);
-        for(int i = 0; i < 3; i++){
-            u8g2.print(keyArray[i],HEX);
-        }
-        u8g2.setCursor(30,20);
-        u8g2.print("         OCTAVE: ");
+        u8g2.print("O:");
         u8g2.print(octaveKnob->getCounter());
         
         u8g2.setCursor(2,30);
         u8g2.drawStr(2,30,keyPressed.c_str());
         // u8g2.drawStr(10,30, "           VOLUME" + str(((Knob *) pvParameters)->getState()));
-        u8g2.setCursor(30,30);
-        u8g2.print("          VOLUME: ");
+        u8g2.setCursor(100,30);
+        u8g2.print("V:");
         u8g2.print(volume);
         u8g2.sendBuffer();          // transfer internal memory to the display
 
@@ -482,14 +514,16 @@ void CAN_RX_Task(void* pvParameters){
       {
         bool expected = true;
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
-        currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
+        int shift = octaveKnob->getCounter() - 4;
+        // currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
+        currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
         amplitudeAmp[msgIn[2] + msgIn[1] * 12] = 64;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b10;
         mapFlag = true;
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(msgIn[2] + msgIn[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex],msgIn[2] + msgIn[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
@@ -503,16 +537,16 @@ void CAN_RX_Task(void* pvParameters){
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b01;
         mapFlag = true;
-        if(control.load() == MultiRecordOn)
+        if(Menu::getMode() == RecordOn)
         {
             xSemaphoreTake(recordMutex, portMAX_DELAY);
-            recordings[recordIndex]->addKeyStroke(msgIn[2] + msgIn[1]*12);
+            addKeyStrokeToRecording(recordings[recordIndex], msgIn[2] + msgIn[1]*12);
             xSemaphoreGive(recordMutex);
         }
       }
       
     }
-    local += ", Note" + std::to_string(msgIn[2]);
+    local += std::to_string(msgIn[2]);
     keyPressed = local;
   }while(!disable_blocks);
 }
@@ -529,7 +563,7 @@ void CAN_RX_ISR (void) {
 void setup() {
     // put your setup code here, to run once:
     mapFlag = true;
-    control = Solo;
+    Menu::setupMen(&recordings);
     CAN_Init(!isMultiple);
     setCANFilter(0x123,0x7ff);
     CAN_Start();
@@ -547,7 +581,7 @@ void setup() {
     CAN_RegisterRX_ISR(CAN_RX_ISR);
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
-    menuKnob = new Knob(0, 3, 0);
+    menuKnob = new Knob(0, 2, 0);
     waveformKnob = new Knob(0,2,1);
     std::fill_n(triangleCoeff, 88, 1);
     
@@ -660,3 +694,4 @@ void setup() {
 
 void loop() {
 }
+#endif
