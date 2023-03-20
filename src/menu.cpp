@@ -101,15 +101,15 @@ public:
                     if(Menu::controlMode.load() == PlaybackOff)
                     {
                         if(extraButt1 && prevCounter == 0)
+                        {
                             decreaseRecIndex();
-                        else if(prevCounter == 100 || prevCounter ==0)
-                            prevCounter = 0;
-                        else
                             prevCounter++;
+                        }
                         if(extraButt2 && prevCounter == 0 )
+                        {
                             increaseRecIndex();
-                        else if(prevCounter == 100 || prevCounter ==0)
-                            prevCounter = 0;
+                            prevCounter++;
+                        }
                         if(yes)
                             Menu::controlMode = PlaybackOn;
                         if(!extraButt1 && !extraButt2)
