@@ -90,6 +90,37 @@ _//Description & Implementation/Thread/Interrupt_: The ScanKeyTask function is r
 - Measured Maximum Execution Time:
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
+### 3.2. DisplayUpdateTask
+_//Description & Implementation/Thread/Interrupt_: 
+
+- Theoretical Minimum Initiation Interval:
+- Measured Maximum Execution Time:
+- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+
+### 3.3. SampleISR
+_//Description & Implementation/Thread/Interrupt_: 
+
+- Theoretical Minimum Initiation Interval:
+- Measured Maximum Execution Time:
+- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+
+### 3.4. CAN_TX_Task
+_//Description & Implementation/Thread/Interrupt_: 
+
+- Theoretical Minimum Initiation Interval:
+- Measured Maximum Execution Time:
+- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+
+### 3.5. CAN_RX_Task
+_//Description & Implementation/Thread/Interrupt_: 
+
+- Theoretical Minimum Initiation Interval:
+- Measured Maximum Execution Time:
+- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+
+
+
+
 ## 4. Analysis
 * _(Include, in this section, pt. 19, 20 & 21 of the *Documentation Specifications*)_
 * _(Probably re-do these tests at the end...)_
