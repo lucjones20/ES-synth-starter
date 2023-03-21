@@ -387,6 +387,7 @@ JoyStickState readJoystick()
   return Middle;
 }
 
+std::string notesPlayed;
 volatile uint8_t keyArray[7];
 void scanKeysTask(void * pvParameters) {
     const TickType_t xFrequency = 75/portTICK_PERIOD_MS;
@@ -394,7 +395,6 @@ void scanKeysTask(void * pvParameters) {
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
     uint8_t analysisCounter = 1;
     do{
-
         if(!disable_blocks)  
           vTaskDelayUntil( &xLastWakeTime, xFrequency );
         for(int i = 0; i < 7; i++){
@@ -417,6 +417,7 @@ void scanKeysTask(void * pvParameters) {
           menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
           volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
         }
+        std::string currentNote_local = "";
         bool expected = true;
         if(mapFlag.compare_exchange_weak(expected, false))
         {  
@@ -427,6 +428,7 @@ void scanKeysTask(void * pvParameters) {
             {
               currentStepMap.erase(it);
             }
+            currentNote_local += stepSizes[it->first%12].name;
           }
           mapFlag = true;
         }
@@ -437,6 +439,7 @@ void scanKeysTask(void * pvParameters) {
         Menu::updateMenu(!(keyArray[6] & 0b1), !(keyArray[6] & 0b10), !(keyArray[5] & 0b1), !(keyArray[5] & 0b10), menuKnob->getCounter());
         recordIndex = Menu::getRecordIndex();
         xSemaphoreGive(keyArrayMutex);    
+        notesPlayed = currentNote_local;
 
     }while(!disable_blocks);
 }
@@ -462,9 +465,10 @@ void displayUpdateTask(void * pvParameters){
             u8g2.print("Normal");
             xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
             u8g2.setCursor(2,20);
-            for(int i = 0; i < 3; i++){
-                u8g2.print(keyArray[i],HEX);
-            }
+            // for(int i = 0; i < 3; i++){
+            //     u8g2.print(keyArray[i],HEX);
+            // }
+            u8g2.drawStr(2, 20, notesPlayed.c_str());
             xSemaphoreGive(keyArrayMutex);
             break;
           case RecordOff:
