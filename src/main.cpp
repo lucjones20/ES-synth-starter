@@ -92,12 +92,13 @@ QueueHandle_t msgInQ;
 
 //Enviroment control variables
 bool isMultiple = false;
+bool isReciever = true;
 
 
 bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
   switch (*state)
   {
-    case 0b10:
+    case 0b10:  //cBit|pBit
       *state = 0b11;
       return true;
     case 0b11:
@@ -106,7 +107,7 @@ bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
       break;
     case 0b01:
       if(*amplitude <= 10 || *amplitude > 64) return false;
-      else *amplitude -= 6;
+      else *amplitude -= (uint8_t) (*amplitude / (float) 6.67);
       break;
     default: break;
   }
@@ -270,69 +271,72 @@ void sampleISR() {
 
   if(mapFlag.compare_exchange_weak(expected, false))
   {
-    for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
-    {
-      if(waveformKnob->getCounter()==1){
-        switch(octaveKnob->getCounter()){
-          case 1:
-            phaseAccArray[it->first] = sineArray->octave1[it->first%12][(sineCounter[it->first%12]++)%400]; 
-            break;
-          case 2:
-            phaseAccArray[it->first] = sineArray->octave2[it->first%12][(sineCounter[it->first%12]++)%200]; 
-            break;
-          case 3:
-            phaseAccArray[it->first] = sineArray->octave3[it->first%12][(sineCounter[it->first%12]++)%100]; 
-            break;            
-          case 4:
-            phaseAccArray[it->first] = sineArray->octave4[it->first%12][(sineCounter[it->first%12]++)%50]; 
-            break;
-          case 5:
-            phaseAccArray[it->first] = sineArray->octave5[it->first%12][(sineCounter[it->first%12]++)%25]; 
-            break;
-          case 6:
-            phaseAccArray[it->first] = sineArray->octave6[it->first%12][(sineCounter[it->first%12]++)%13]; 
-          case 7:
-            phaseAccArray[it->first] = sineArray->octave6[it->first%12][(sineCounter[it->first%12]++)%7]; 
-            break;
-        }
-        Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
-      }
-      else if(waveformKnob->getCounter()==2){
-        if(phaseAccArray[it->first] + triangleCoeff[it->first] * 2 * it->second < phaseAccArray[it->first]){
-          triangleCoeff[it->first] = -1;
-        }
-        else{
-          triangleCoeff[it->first] = 1;
-        }
-        phaseAccArray[it->first] += triangleCoeff[it->first] * 2 * it->second;
-
-        Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
-      }
-
-      else if(waveformKnob->getCounter()==3)  //Implementing Square Wave (WIP)
+    if(!isMultiple || (isMultiple && isReciever)){
+      
+      for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
       {
-        
-      phaseAccArray[it->first] += it->second;
+        if(waveformKnob->getCounter()==1){
+          switch(octaveKnob->getCounter()){
+            case 1:
+              phaseAccArray[it->first] = sineArray->octave1[it->first%12][(sineCounter[it->first%12]++)%400]; 
+              break;
+            case 2:
+              phaseAccArray[it->first] = sineArray->octave2[it->first%12][(sineCounter[it->first%12]++)%200]; 
+              break;
+            case 3:
+              phaseAccArray[it->first] = sineArray->octave3[it->first%12][(sineCounter[it->first%12]++)%100]; 
+              break;            
+            case 4:
+              phaseAccArray[it->first] = sineArray->octave4[it->first%12][(sineCounter[it->first%12]++)%50]; 
+              break;
+            case 5:
+              phaseAccArray[it->first] = sineArray->octave5[it->first%12][(sineCounter[it->first%12]++)%25]; 
+              break;
+            case 6:
+              phaseAccArray[it->first] = sineArray->octave6[it->first%12][(sineCounter[it->first%12]++)%13]; 
+            case 7:
+              phaseAccArray[it->first] = sineArray->octave6[it->first%12][(sineCounter[it->first%12]++)%7]; 
+              break;
+          }
+          Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+        }
+        // else if(waveformKnob->getCounter()==2){
+        //   if(phaseAccArray[it->first] + triangleCoeff[it->first] * 2 * it->second < phaseAccArray[it->first]){
+        //     triangleCoeff[it->first] = -1;
+        //   }
+        //   else{
+        //     triangleCoeff[it->first] = 1;
+        //   }
+        //   phaseAccArray[it->first] += triangleCoeff[it->first] * 2 * it->second;
 
-      if (phaseAccArray[it->first] <= pow(2,31))
-      {
-        Vout += (-127)*((float)amplitudeAmp[it->first]/(float)64); //LOW
-      }
-      else
-      {
-        Vout += 127*((float)amplitudeAmp[it->first]/(float)64); //HIGH
-      }
+        //   Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+        // }
 
-      // Vout += (phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
-      // Vout *= ((float)amplitudeAmp[it->first]/(float)64)-128;    
-
-      }
-
-      else{ //Sawtooth, default
+        else if(waveformKnob->getCounter()==2)  //Implementing Square Wave (WIP)
+        {
+          
         phaseAccArray[it->first] += it->second;
 
-        Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
-      }
+        if (phaseAccArray[it->first] <= pow(2,31))
+        {
+          Vout += (-127)*((float)amplitudeAmp[it->first]/(float)64); //LOW
+        }
+        else
+        {
+          Vout += 127*((float)amplitudeAmp[it->first]/(float)64); //HIGH
+        }
+
+        // Vout += (phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+        // Vout *= ((float)amplitudeAmp[it->first]/(float)64)-128;    
+
+        }
+
+        else{ //Sawtooth, default
+          phaseAccArray[it->first] += it->second;
+
+          Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+        }
+    }
 
     }
     mapFlag = true;
@@ -552,8 +556,8 @@ void CAN_RX_Task(void* pvParameters){
         bool expected = true;
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
         int shift = octaveKnob->getCounter() - 4;
-        // currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[octaveKnob->getCounter()];
-        currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
+        currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[msgIn[1]];
+        // currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
         amplitudeAmp[msgIn[2] + msgIn[1] * 12] = 64;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b10;
         mapFlag = true;
@@ -621,7 +625,7 @@ void setup() {
     menuKnob = new Knob(0, 3, 0);
     // waveformKnob = new Knob(0,2,1);
 
-    waveformKnob = new Knob(0, 3, 0);   //increasing the number of waveforms range so it's easier to test...
+    waveformKnob = new Knob(0, 2, 0);   //increasing the number of waveforms range so it's easier to test...
 
     std::fill_n(triangleCoeff, 88, 1);
     
