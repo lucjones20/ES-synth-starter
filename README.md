@@ -6,15 +6,23 @@ Table of Contents
 
 1. [Introduction](#introduction)
 2. [Features](#features)
+    2.1. [Core features]
+    2.2. [Advanced features]
 3. [Tasks](#tasks)  
     3.1. [scanKeyTask](#scankeytask)  
     3.2. [displayUpdateTask]
  4. [Analysis](#analysis)
 
-##  Introduction
+## 1. Introduction
 
-## Tasks
-### ScanKeyTask
+## 2. Features
+### 2.1. Core features
+
+### 2.2. Advanced features
+
+## 3. Tasks
+## (*For each task, 
+### 3.1. ScanKeyTask
 The ScanKeyTask function is responsible for reading the key matrix
 
 ## Analysis
