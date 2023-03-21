@@ -314,16 +314,16 @@ void sampleISR() {
         
       phaseAccArray[it->first] += it->second;
 
-      if (phaseAccArray[it->first] <= pow(2,32)-1)
+      if (phaseAccArray[it->first] <= pow(2,31))
       {
-        Vout = 0; //LOW
+        Vout += (-127)*((float)amplitudeAmp[it->first]/(float)64); //LOW
       }
       else
       {
-        Vout = 3.3; //HIGH
+        Vout += 127*((float)amplitudeAmp[it->first]/(float)64); //HIGH
       }
 
-      Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+      // Vout += (phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
       // Vout *= ((float)amplitudeAmp[it->first]/(float)64)-128;    
 
       }
@@ -614,10 +614,10 @@ void setup() {
     CAN_RegisterRX_ISR(CAN_RX_ISR);
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
-    menuKnob = new Knob(0, 2, 0);
+    menuKnob = new Knob(0, 3, 0);
     // waveformKnob = new Knob(0,2,1);
 
-    waveformKnob = new Knob(0, 3, 1);   //increasing the number of waveforms range so it's easier to test...
+    waveformKnob = new Knob(0, 2, 2);   //increasing the number of waveforms range so it's easier to test...
 
     std::fill_n(triangleCoeff, 88, 1);
     

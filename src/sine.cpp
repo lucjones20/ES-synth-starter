@@ -46,13 +46,13 @@ void initSineArray(SineArray* sineArray){
             sineArray->octave4[i][j] = 2147483648 * sin(( 2 * 3.1415 * noteFrequencies[i] * j  )) + 2147483648;
         }
         for(int j=0; j<25; j++){
-            sineArray->octave5[i][j] = 0;
+            sineArray->octave4[i][j] = 2147483648 * sin(( 2 * 3.1415 * noteFrequencies[i] * 2 * j  )) + 2147483648;
         }
         for(int j=0; j<13; j++){
-            sineArray->octave6[i][j] = 0;
+            sineArray->octave4[i][j] = 2147483648 * sin(( 2 * 3.1415 * noteFrequencies[i] * 4 * j  )) + 2147483648;
         }
         for(int j=0; j<7; j++){
-            sineArray->octave7[i][j] = 0;
+            sineArray->octave4[i][j] = 2147483648 * sin(( 2 * 3.1415 * noteFrequencies[i] * 8 * j  )) + 2147483648;
         }
     }
 }
