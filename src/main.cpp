@@ -311,6 +311,12 @@ void sampleISR() {
     }
     mapFlag = true;
     Vout = Vout >> (8 - volumeKnob->getCounter());
+    if(Vout > 127){
+      Vout = 127;
+    }
+    if(Vout < -127){
+      Vout = -127;
+    }
     analogWrite(OUTR_PIN, Vout + 128);
   }
 }
@@ -582,7 +588,7 @@ void setup() {
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
     menuKnob = new Knob(0, 2, 0);
-    waveformKnob = new Knob(0,2,1);
+    waveformKnob = new Knob(0,2,0);
     std::fill_n(triangleCoeff, 88, 1);
     
     //Set pin directions
