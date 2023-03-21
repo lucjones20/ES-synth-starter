@@ -84,7 +84,11 @@ Table of Contents
 ## 3. Tasks
 * _(For each task, include: method of implementation, thread or interrupt + theoretical minimum initiation interval and measured maximum execution time + a critical instant analysis of the rate monotonic scheduler, showing that all deadlines are met under worst-case conditions)_
 ### 3.1. ScanKeyTask
-The ScanKeyTask function is responsible for reading the key matrix
+_//Description & Implementation/Thread/Interrupt_: The ScanKeyTask function is responsible for reading the key matrix...
+
+- Theoretical Minimum Initiation Interval:
+- Measured Maximum Execution Time:
+- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 ## 4. Analysis
 * _(Include, in this section, pt. 19, 20 & 21 of the *Documentation Specifications*)_
