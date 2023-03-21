@@ -617,7 +617,7 @@ void setup() {
     menuKnob = new Knob(0, 3, 0);
     // waveformKnob = new Knob(0,2,1);
 
-    waveformKnob = new Knob(0, 2, 2);   //increasing the number of waveforms range so it's easier to test...
+    waveformKnob = new Knob(0, 3, 0);   //increasing the number of waveforms range so it's easier to test...
 
     std::fill_n(triangleCoeff, 88, 1);
     
