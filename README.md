@@ -15,6 +15,8 @@ Table of Contents
     3.3. [CAN_TX_Task](#cantxtask)  
     3.4. [CAN_RX_Task](#canrxtask) 
  4. [Analysis](#analysis)   
+ 5. [References](#references)
+
 
 ## 1. Introduction 
 
@@ -130,3 +132,9 @@ ScanKeyTask: 8430 / 32 = 263 $\mu s$
 displayUpdateTask: 554261 / 32 = 17 320 $\mu s$ 
 
 sampleISR: 689 / 32 = 21.5 $\mu s$  
+
+
+## 5. References
+[1] - F. W. Wibowo, “The Detection of Signal on Digital Audio Synthesizer Based-On Propeller,” Advanced Science Letters, vol. 23, no. 6, pp. 5472–5475, Jun. 2017, doi: https://doi.org/10.1166/asl.2017.7402.
+‌
+
