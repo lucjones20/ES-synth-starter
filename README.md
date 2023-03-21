@@ -68,8 +68,11 @@ Table of Contents
         - Resolution: 
         - Implementation: 
 
+- e. Other instruments
+    - ...
 
-- e. Recording & Playback
+
+- f. Recording & Playback
     - ...
 
 * _(*Not implemented/Not implemented yet)_
