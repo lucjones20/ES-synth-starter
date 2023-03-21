@@ -267,6 +267,7 @@ void sampleISR() {
   static int sineCounter[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
   int16_t Vout = 0;
   bool expected = true;
+
   if(mapFlag.compare_exchange_weak(expected, false))
   {
     for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
@@ -294,6 +295,7 @@ void sampleISR() {
             phaseAccArray[it->first] = sineArray->octave6[it->first%12][(sineCounter[it->first%12]++)%7]; 
             break;
         }
+        Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
       }
       else if(waveformKnob->getCounter()==2){
         if(phaseAccArray[it->first] + triangleCoeff[it->first] * 2 * it->second < phaseAccArray[it->first]){
@@ -303,11 +305,35 @@ void sampleISR() {
           triangleCoeff[it->first] = 1;
         }
         phaseAccArray[it->first] += triangleCoeff[it->first] * 2 * it->second;
+
+        Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
       }
-      else{
-        phaseAccArray[it->first] += it->second;
+
+      else if(waveformKnob->getCounter()==3)  //Implementing Square Wave (WIP)
+      {
+        
+      phaseAccArray[it->first] += it->second;
+
+      if (phaseAccArray[it->first] <= pow(2,32)-1)
+      {
+        Vout = 0; //LOW
       }
+      else
+      {
+        Vout = 3.3; //HIGH
+      }
+
       Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+      // Vout *= ((float)amplitudeAmp[it->first]/(float)64)-128;    
+
+      }
+
+      else{ //Sawtooth, default
+        phaseAccArray[it->first] += it->second;
+
+        Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+      }
+
     }
     mapFlag = true;
     Vout = Vout >> (8 - volumeKnob->getCounter());
@@ -476,7 +502,8 @@ void displayUpdateTask(void * pvParameters){
         u8g2.setCursor(50,30);
         u8g2.print("W");
         u8g2.print(waveformKnob->getCounter());
-        u8g2.print("O:");
+        // u8g2.print("□");
+        u8g2.print("   O:");  //Bastien: just added spaces to separate the W and O on the LCD
         u8g2.print(octaveKnob->getCounter());
         
         u8g2.setCursor(2,30);
@@ -582,7 +609,10 @@ void setup() {
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
     menuKnob = new Knob(0, 2, 0);
-    waveformKnob = new Knob(0,2,1);
+    // waveformKnob = new Knob(0,2,1);
+
+    waveformKnob = new Knob(0, 3, 1);   //increasing the number of waveforms range so it's easier to test...
+
     std::fill_n(triangleCoeff, 88, 1);
     
     //Set pin directions
