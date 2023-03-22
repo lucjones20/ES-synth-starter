@@ -4,18 +4,22 @@ DOCUMENTATION
 Table of Contents
 -----------------------------
 
-1. [Introduction](#introduction)
-2. [Features](#features)    
-    2.1. [Core Features](#corefeatures)     
-    2.2. [Advanced Features](#advancedfeatures) 
-3. [Tasks](#tasks)  
-    3.1. [scanKeyTask](#scankeytask)  
-    3.2. [displayUpdateTask](#displayupdatetask)    
-    3.3. [sampleISR](#sampleISR)    
-    3.3. [CAN_TX_Task](#cantxtask)  
-    3.4. [CAN_RX_Task](#canrxtask) 
- 4. [Analysis](#analysis)   
- 5. [References](#references)
+1. [Introduction](#1-introduction)  
+2. [Features](#2-features)  
+    2.1. [Core Features](#21-core-features)      
+    2.2. [Advanced Features](#22-advanced-features)  
+3. [Tasks](#3-tasks)  
+    3.1. [scanKeyTask](#31-scankeytask)  
+    3.2. [displayUpdateTask](#32-displayupdatetask)    
+    3.3. [sampleISR](#33-sampleisr)    
+    3.4. [CAN_TX_Task](#34-can\_tx\_task)  
+    3.5. [CAN_RX_Task](#35-can\_rx\_task)  
+4. [Analysis](#4-analysis)   
+5. [References](#5-references)  
+
+
+<!-- [0.0. Test Test](#00-test-test)
+### 0.0. Test Test -->
 
 &nbsp;  
 ## 1. Introduction 
@@ -39,27 +43,28 @@ This project surrounds the embedded software used to program a ST NUCLEO-L432KC 
 
 This project was completed by Electrical Engineering students from Imperial College London for the 2nd Coursework of the ELEC60013 - Embedded Systems module.
 
-Group members: Zsombor Klapper, Luc Jones, Bastien Baluyot, Abdal Al-Kilany.
+**Group members:** Zsombor Klapper, Luc Jones, Bastien Baluyot, Abdal Al-Kilany.
 
 &nbsp;  
 
 ## 2. Features
 <!-- &nbsp;   -->
 
-### 2.1. Core features
+### 2.1. Core Features
 &nbsp;  
-- The synthesizer plays the correct music note with a sawtooth wave and without any delay
-- There are 8 different volumes which you can control with a knob
-- OLED display shows the current notes being played and the current volume 
-- OLED display refreshes every 100ms and the LD3 LED toggles every 100ms
-- The synthesizer can be configured as a sender or reciever at compile time
-- The synthesizer will play the sounds if it is a reciever
-- The synthesizer will send the note if it is a sender  
+- The synthesizer plays the correct music note with a sawtooth wave when the corresponding key is pressed without any delay between the key press and the tone starting.
+- There are 8 different volume setting which can be controlled and adjusted with a knob.
+- The OLED display shows the current notes being played and the current volume setting, amongst other additional information (see Menu in [Advanced Features](#22-advanced-features)).
+    - The OLED display refreshes and the LED LD3 (on the MCU module) toggles every 100ms.
+- The synthesiser can be configured as a sender or reciever at compile time.
+    - If configured as a sender, the synthesiser sends the appropriate note(s) when a key is pressed/released as a message via the CAN bus.
+    - If configured as receiver, the synthesiser plays/stops playing the appropriate note(s) after receiving the message.
 &nbsp;  
 
 
 
-### 2.2. Advanced features _(add Figures/Videos later when revising...)_
+### 2.2. Advanced Features 
+_(add Figures/Videos later when revising...)_
 
 &nbsp;  
 - a. Polyphony
@@ -180,6 +185,7 @@ _//Description & Implementation/Thread/Interrupt_: The ScanKeyTask function is r
 - Measured Maximum Execution Time:
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
+&nbsp;  
 ### 3.2. DisplayUpdateTask
 _//Description & Implementation/Thread/Interrupt_: 
 
@@ -187,6 +193,7 @@ _//Description & Implementation/Thread/Interrupt_:
 - Measured Maximum Execution Time:
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
+&nbsp;  
 ### 3.3. SampleISR
 _//Description & Implementation/Thread/Interrupt_: 
 
@@ -194,6 +201,7 @@ _//Description & Implementation/Thread/Interrupt_:
 - Measured Maximum Execution Time:
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
+&nbsp;  
 ### 3.4. CAN_TX_Task
 _//Description & Implementation/Thread/Interrupt_: 
 
@@ -201,6 +209,7 @@ _//Description & Implementation/Thread/Interrupt_:
 - Measured Maximum Execution Time:
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
+&nbsp;  
 ### 3.5. CAN_RX_Task
 _//Description & Implementation/Thread/Interrupt_: 
 
@@ -227,5 +236,5 @@ sampleISR: 689 / 32 = 21.5 $\mu s$
 &nbsp;  
 ## 5. References
 [1] - F. W. Wibowo, “The Detection of Signal on Digital Audio Synthesizer Based-On Propeller,” _Advanced Science Letters_, vol. 23, no. 6, pp. 5472–5475, Jun. 2017, doi: https://doi.org/10.1166/asl.2017.7402.
-‌
 
+[def]: #1test
