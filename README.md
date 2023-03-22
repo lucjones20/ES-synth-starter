@@ -134,13 +134,15 @@ _(add Figures/Videos later when revising...)_
 
 &nbsp;  
 - f. Recording & Playback
-    - ...
+    - A record feature has been implemented, to help the user make more complex plays. The record & playback feature provides the user with ability to record every keystroke supporting multiple tracks (can record multiple tracks) and can later play them back while having the ability to play on top of it. 
 
     &nbsp; 
-    - Recording: ...
+    - Recording: The records are stored in a Recording struct, which logs the key presses and releases and the interval between them. It records both incoming messages and outgoing messages and basically stores said messages. Each record structure is stored as a pointer in a std::vector which allows for multiple tracks to be stored. 
 
     &nbsp;  
-    - Playback: The recorded keys are played back using the currently selected waveform on the keyboard.
+    - Playback: The recorded keys are played back using the currently selected waveform on the keyboard. It works the same way as if extra incoming messages from other boards would be interpreted onto the board, thus allowing extra keypresses to be played on top of it. As a result, one can produce complex plays which usually would require multiple people. 
+    
+    
 
     - >**[DEMO VIDEO CLIP FOR RECORDING & PLAYBACK]**
 
@@ -159,6 +161,9 @@ _(add Figures/Videos later when revising...)_
     - >**[PICTURE OF THE MENU]**
 
     - >**[PICTURE OF STATE MACHINE OF THE MENU...]**
+
+    &nbsp;
+    - Record & Playback controls: For the contols it uses knob presses in the following way: Knob0 - Start, Knob1-Cancel, Knob2-Stop/Decrease, Knob3-Increase. Firstly one must select the RecordOff mode, then by pressing start it will capture the inputs. One can pause it using the stop button or can finalise it and save it with the cancel button. After at least one recording has been recording PlaybackOff will be available for choosing. The user can select which track he wants to play with the decrease/increase buttons and can start the playback with the start button. The playback can be stoped at any moment with the cancel button and then can be resumed with the press of the start button again.
 
     &nbsp;  
     - _(Does the menu display any information regarding whether there are other keyboard modules connected? e.g. East/West...)_
