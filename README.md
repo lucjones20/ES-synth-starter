@@ -190,6 +190,8 @@ _//Description & Implementation/Thread/Interrupt_: The ScanKeyTask function is r
 - Measured Maximum Execution Time:
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
+> - Mention how we could increase the frequency, allowing for better reading of the knob states (they are not as well-functioning since the detents are not read as properly due to intermediate states...). Just acknowledge this consideration..
+
 &nbsp;  
 ### 3.2. DisplayUpdateTask
 _//Description & Implementation/Thread/Interrupt_: 
