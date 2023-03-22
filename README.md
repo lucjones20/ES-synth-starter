@@ -119,7 +119,7 @@ _(add Figures/Videos later when revising...)_
 
 &nbsp;  
 - e. Additional Instruments
-    - Following the implementation of additional waveforms and ADSR Envelope modulation for the synthesis of music, the synthesis of different, additional instruments were made possible. Each instrument corresponds to a waveform and an ADSR ratio, as shown in the table [1].
+    - Following the implementation of additional waveforms and ADSR Envelope modulation for the synthesis of music, the synthesis of different, additional instruments were made possible. Each instrument corresponds to a waveform and an ADSR ratio, as shown in the table [[1](#5-references)].
 
         | Instrument | A | D | S | R | Waveform |
         | :----: | :----: | :----: | :----: | :----: | :----: |
