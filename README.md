@@ -126,7 +126,7 @@ _(add Figures/Videos later when revising...)_
 
 <div align="center">
 
-<table>    
+<!-- <table>     -->
     
         | Instrument | A | D | S | R | Waveform |
         | :----: | :----: | :----: | :----: | :----: | :----: |
@@ -135,7 +135,7 @@ _(add Figures/Videos later when revising...)_
         | Violin | 10 | 8 | 10 | 9 | Square |
         | Cello | 0 | 9 | 0 | 0 | Square |
     
-</table>
+<!-- </table> -->
 
 </div>
 
