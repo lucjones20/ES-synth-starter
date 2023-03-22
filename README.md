@@ -20,7 +20,7 @@ Table of Contents
 
 ## 1. Introduction 
 
-![ADSR Graph](ADSR graph.png)
+![title](ADSR graph.png)
 
 ## 2. Features
 ### 2.1. Core features
