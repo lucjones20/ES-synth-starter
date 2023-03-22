@@ -124,12 +124,14 @@ _(add Figures/Videos later when revising...)_
 - e. Additional Instruments
     - Following the implementation of additional waveforms and ADSR Envelope modulation for the synthesis of music, the synthesis of different, additional instruments were made possible. Each instrument corresponds to a waveform and an ADSR ratio, as shown in the table [[1](#5-references)].
 
+        <p align="center">
         | Instrument | A | D | S | R | Waveform |
         | :----: | :----: | :----: | :----: | :----: | :----: |
         | Piano | 0 | 9 | 0 | 9 | Sawtooth |
         | Flute | 6 | 0 | 8 | 0 | Square |
         | Violin | 10 | 8 | 10 | 9 | Square |
         | Cello | 0 | 9 | 0 | 0 | Square |
+        </p>
 
     - The most basic sound, the sound of a piano, uses the default sawtooth waveform and inherently has no Attack/Sustain phase. Therefore, the core specification is still satisfied since there is no perceptible delay between initially pressing the key and the volume reaching maximum.
     
