@@ -139,7 +139,7 @@ bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
       break;
     case 0b111:
       if(*amplitude <= 10 || *amplitude > 64) return false;
-      else if(amplitude >= 48) *amplitude -= 2;
+      else if(*amplitude >= 48) *amplitude -= 2;
       else *amplitude = 48;
       break;
     case 0b001:
@@ -544,9 +544,9 @@ void displayUpdateTask(void * pvParameters){
         u8g2.print(octaveKnob->getCounter());
         
         u8g2.setCursor(2,30);
-        xSemaphoreTake(keyPressed, portMAX_DELAY);
+        xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         u8g2.drawStr(2,30,keyPressed.c_str());
-        xSemaphoreGive(keyPressed);
+        xSemaphoreGive(keyArrayMutex);
         u8g2.setCursor(100,30);
         u8g2.print("V:");
         u8g2.print(volume);
@@ -679,7 +679,6 @@ void setup() {
 
     //Timer to trigger interrupt (sampleISR() function)
     #ifndef DISABLE_INTERRUPT
-    HardwareTimer *sampleTimer;
     TIM_TypeDef *Instance = TIM1;
     HardwareTimer *sampleTimer = new HardwareTimer(Instance);
     sampleTimer->setOverflow(22000, HERTZ_FORMAT);
@@ -755,6 +754,9 @@ void setup() {
         }
         Serial.println(micros()-startTime);
         while(1); 
+      #endif
+      #ifdef TEST_COMMUNICATION_TASKS
+
       #endif
 }
 

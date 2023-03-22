@@ -4,7 +4,7 @@
 #include <atomic>
 #include <vector>
 #include "common_structures.cpp"
-
+#include <STM32FreeRTOS.h>
 class Menu
 {
 private:
@@ -47,7 +47,7 @@ public:
         Menu::newRecord = false;
         Menu::onLoop = false;
         prevCounter = 0;
-        recordMutex = mutex;
+        recordingMutex = mutex;
     }
     static void updateMenu(bool yes, bool no, bool extraButt1, bool extraButt2, uint32_t selectMode) //1. is it confirm, 2. is it cancel, 3. go up, 4 switch mode, 5 change volume, 6 change octave
     {
@@ -68,7 +68,7 @@ public:
                             xSemaphoreTake(*recordingMutex, portMAX_DELAY);
                             Menu::recs->push_back(new Recording());
                             Menu::recIndex = recs->size()-1;
-                            xSemaphoreGive(recordingMutex);
+                            xSemaphoreGive(*recordingMutex);
                             Menu::newRecord = true;
                             Menu::controlMode = RecordOn;
                         }
@@ -115,7 +115,7 @@ public:
                             increaseRecIndex();
                             prevCounter++;
                         }
-                        xSemaphoreGive(recordingMutex);
+                        xSemaphoreGive(*recordingMutex);
                         if(yes)
                             Menu::controlMode = PlaybackOn;
                         if(!extraButt1 && !extraButt2)
