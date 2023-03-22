@@ -99,29 +99,29 @@ QueueHandle_t msgOutQ;
 QueueHandle_t msgInQ;
 
 //Enviroment control variables
-bool isMultiple = false;
+bool isMultiple = true;
 bool isReciever = true;
 
 //ADSR State machine
-// bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
-//   switch (*state)
-//   {
-//     case 0b10:  //cBit|pBit
-//       *state = 0b11;
-//       return true;
-//     case 0b11:
-//       if(*amplitude <= 10) return false;
-//       else *amplitude -= 2;
-//       break;
-//     case 0b01:
-//       if(*amplitude <= 10 || *amplitude > 64) return false;
-//       else *amplitude -= (uint8_t) (*amplitude / (float) 6.67);
-//       break;
-//     default: break;
-//   }
-//   return true;
-// }
-
+bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
+  switch (*state)
+  {
+    case 0b10:  //cBit|pBit
+      *state = 0b11;
+      return true;
+    case 0b11:
+      if(*amplitude <= 10) return false;
+      else *amplitude -= 0.66;
+      break;
+    case 0b01:
+      if(*amplitude <= 10 || *amplitude > 64) return false;
+      else *amplitude -= 2;
+      break;
+    default: break;
+  }
+  return true;
+}
+/*
 bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
   bool peaked;
   switch (*state)
@@ -151,7 +151,7 @@ bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
     break;
   }
   return true;
-}
+}*/
 
 
 
@@ -224,9 +224,7 @@ void nextStepToPlayback(Recording* rec)
 
         amplitudeAmp[rec->keyStrokes[rec->curIndex].first] = 64;
         amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b10;
-        currentStepMap[rec->keyStrokes[rec->curIndex].first] = 
-          (shift >= 0) ? (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize << shift) 
-          : (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize >> abs(shift));
+        currentStepMap[rec->keyStrokes[rec->curIndex].first] = (shift >= 0) ? (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize << shift) : (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize >> abs(shift));
         rec->pressed.insert(rec->keyStrokes[rec->curIndex].first);
       }
       rec->curIndex++;
@@ -305,7 +303,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 
 void sampleISR() {
   static int sineCounter[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
-  int16_t Vout = 0;
+  int32_t Vout = 0;
   bool expected = true;
 
   if(mapFlag.compare_exchange_weak(expected, false))
@@ -387,7 +385,7 @@ void sampleISR() {
       Vout = -127;
     }
     analogWrite(OUTR_PIN, Vout + 128);
-  }
+      }
 }
 
 
@@ -426,7 +424,7 @@ uint8_t readCols(){
 
 void scanKeysTask(void * pvParameters) {
     //Init of task
-    const TickType_t xFrequency = 75/portTICK_PERIOD_MS;
+    const TickType_t xFrequency = 25/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
     uint8_t analysisCounter = 1;
@@ -442,9 +440,10 @@ void scanKeysTask(void * pvParameters) {
 
             keyArray[i] = readCols();
         }
+        volumeKnob->advanceState((keyArray[3] & 0b0010) | (keyArray[3] & 0b0001));
         octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
-        menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
-        waveformKnob->advanceState((keyArray[4] & 0b0100 | keyArray[3] & 0b1000) >> 2);
+        menuKnob->advanceState((keyArray[3] & 0b0100) >> 2 | (keyArray[3] & 0b1000) >> 2);
+        waveformKnob->advanceState((keyArray[4] & 0b0100)>> 2 | (keyArray[4] & 0b1000) >> 2);
         std::string currentNote_local = "";
         bool expected = true;
         if(mapFlag.compare_exchange_weak(expected, false))
@@ -452,7 +451,7 @@ void scanKeysTask(void * pvParameters) {
           processKeys(&(keyArray[0]), &prevKeyArray[0]);
           for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
           {
-            if(!nextAmplitude2(&amplitudeState[it->first], &amplitudeAmp[it->first]))
+            if(!nextAmplitude(&amplitudeState[it->first], &amplitudeAmp[it->first]))
             {
               currentStepMap.erase(it);
             }
@@ -579,7 +578,7 @@ void CAN_RX_Task(void* pvParameters){
       {
         bool expected = true;
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
-        int shift = octaveKnob->getCounter() - 4;
+        int shift = msgIn[1] - 4;
         currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
         amplitudeAmp[msgIn[2] + msgIn[1] * 12] = 64;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b10;
@@ -649,7 +648,7 @@ void setup() {
     menuKnob = new Knob(0, 3, 0);
     // waveformKnob = new Knob(0,2,1);
 
-    waveformKnob = new Knob(0, 2, 0);   //increasing the number of waveforms range so it's easier to test...
+    waveformKnob = new Knob(0, 3, 0);   //increasing the number of waveforms range so it's easier to test...
 
     std::fill_n(triangleCoeff, 88, 1);
     
@@ -756,7 +755,13 @@ void setup() {
         while(1); 
       #endif
       #ifdef TEST_COMMUNICATION_TASKS
-
+      uint32_t sendTimer = 0;
+      uint32_t recievTimer = 0;
+      for(int i = 0; i < 32; i++)
+      {
+        auto startTime = micros();
+        
+      }
       #endif
 }
 

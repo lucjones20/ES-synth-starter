@@ -9,6 +9,7 @@ private:
   uint32_t upperBound;
   uint8_t prevBA;
   bool prevUp = true;
+  bool prevNormal = false;
   void setCounter(int i)
   {
     if(i == 1 && state.load() < upperBound)
@@ -37,14 +38,16 @@ public:
         {
           case 0b01:
             prevUp = true;
+            prevNormal = true;
             setCounter(1);
             break;
 
           case 0b11:
-            if(prevUp)
+            if(prevUp && prevNormal)
               setCounter(1);
-            else
+            else if(prevNormal)
               setCounter(-1);
+            prevNormal = false;
             break;
 
           default:
@@ -56,14 +59,16 @@ public:
         {
           case 0b00:
             prevUp = false;
+            prevNormal = true;
             setCounter(-1);
             break;
 
           case 0b10:
-            if(prevUp)
+            if(prevUp&&prevNormal)
               setCounter(1);
-            else
+            else if(prevNormal)
               setCounter(-1);
+            prevNormal = false;
             break;
       
           default:
@@ -74,14 +79,16 @@ public:
         {
           case 0b11:
             prevUp = false;
+            prevNormal = true;
             setCounter(-1);
             break;
           
           case 0b01:
-            if(prevUp)
+            if(prevUp && prevNormal)
               setCounter(1);
-            else
+            else if(prevNormal)
               setCounter(-1);
+            prevNormal = false;
             break;
 
           default:
@@ -92,14 +99,16 @@ public:
         {
           case 0b10:
             prevUp = true;
+            prevNormal = true;
             setCounter(1);
             break;
 
           case 0b00:
-            if(prevUp)
+            if(prevUp && prevNormal)
               setCounter(1);
-            else
+            else if(prevNormal)
               setCounter(-1);
+            prevNormal = false;
             break;
           default:
             break;
