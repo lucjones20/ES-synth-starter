@@ -103,24 +103,24 @@ bool isMultiple = false;
 bool isReciever = true;
 
 //ADSR State machine
-bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
-  switch (*state)
-  {
-    case 0b10:  //cBit|pBit
-      *state = 0b11;
-      return true;
-    case 0b11:
-      if(*amplitude <= 10) return false;
-      else *amplitude -= 2;
-      break;
-    case 0b01:
-      if(*amplitude <= 10 || *amplitude > 64) return false;
-      else *amplitude -= (uint8_t) (*amplitude / (float) 6.67);
-      break;
-    default: break;
-  }
-  return true;
-}
+// bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
+//   switch (*state)
+//   {
+//     case 0b10:  //cBit|pBit
+//       *state = 0b11;
+//       return true;
+//     case 0b11:
+//       if(*amplitude <= 10) return false;
+//       else *amplitude -= 2;
+//       break;
+//     case 0b01:
+//       if(*amplitude <= 10 || *amplitude > 64) return false;
+//       else *amplitude -= (uint8_t) (*amplitude / (float) 6.67);
+//       break;
+//     default: break;
+//   }
+//   return true;
+// }
 
 bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
   bool peaked;
@@ -134,10 +134,8 @@ bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
       peaked = true;
       return false;
       }
-      else if(*amplitude < 64 && !peaked) *amplitude += 8;
-      else if(*amplitude < 64 && peaked) *amplitude -=2;
-      else if(*amplitude <= 10) return false;
-      else *amplitude -= 2;
+      if(*amplitude < 64) *amplitude += 8;
+      else *state = 0b011;;
       break;
     case 0b111:
       if(*amplitude <= 10 || *amplitude > 64) return false;
@@ -145,9 +143,6 @@ bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
       else *amplitude = 48;
       break;
     case 0b001:
-      *state = 0b000;
-      break;
-    case 0b000:
       if(*amplitude <= 10 || *amplitude > 64) return false;
       else *amplitude -= (uint8_t) (*amplitude / (float) 6.67);
       break;
@@ -457,7 +452,7 @@ void scanKeysTask(void * pvParameters) {
           processKeys(&(keyArray[0]), &prevKeyArray[0]);
           for(auto it = currentStepMap.begin(); it != currentStepMap.end(); it++)
           {
-            if(!nextAmplitude(&amplitudeState[it->first], &amplitudeAmp[it->first]))
+            if(!nextAmplitude2(&amplitudeState[it->first], &amplitudeAmp[it->first]))
             {
               currentStepMap.erase(it);
             }

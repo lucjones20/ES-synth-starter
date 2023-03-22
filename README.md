@@ -244,16 +244,18 @@ _//Description & Implementation/Thread/Interrupt_:
 * queue for outgoing message and incomming message: protected by CAN_TX_Semaphore as detailed in the lab tutorials
 * Knob and menu parameters: many parameters from these classes can be accessed from multiple threads at any time ensured by using atomic variables with atomic operations.
  
- ## Deadlocks:
+ ## Deadlocks
  Our implementation according to our analysis is completely deadlock free. The only interdependent mutex usage is using recordingMutex while inside the critical section of keyArrayMutex in scanKey task. However since this is our only interdependent mutex usage it is ensured that even if one of the mutexes are taken they will be freed without requiring the other mutex. 
 
 
-&nbsp;  
-ScanKeyTask: 8430 / 32 = 263 $\mu s$ 
+&nbsp;
+## Timing analysis  
 
-displayUpdateTask: 554261 / 32 = 17 320 $\mu s$ 
+* ScanKeyTask: 8430 / 32 = 263 $\mu s$ 
 
-sampleISR: 689 / 32 = 21.5 $\mu s$  
+* displayUpdateTask: 554261 / 32 = 17 320 $\mu s$ 
+
+* sampleISR: 689 / 32 = 21.5 $\mu s$  
 
 &nbsp;  
 ## 5. References
