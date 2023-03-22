@@ -94,12 +94,12 @@ _(add Figures/Videos later when revising...)_
 
         - R - Release: Finally, the current volume is decreased back to 0/minimum in the Release phase. This is usually a non-linear decay and is implemented as such.
 
-        - >**[PICTURE OF GRAPH FOR ADSR]**
+        - ![ADSR Graph](ADSR graph.png)
     
 
     - The ADSR Envelope feature was implemented with a state machine that reduces the max volume of the sound output according to the phase and stage/progression in the phase.
 
-    - >**[PICTURE OF ADSR STATE MACHINE]**
+    - ![ADSR State Machine Implementation](ADSR State Machine.png)
 
 &nbsp;  
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
