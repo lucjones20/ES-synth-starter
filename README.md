@@ -99,7 +99,7 @@ _(add Figures/Videos later when revising...)_
 
     - The ADSR Envelope feature was implemented with a state machine that reduces the max volume of the sound output according to the phase and stage/progression in the phase.
 
-        ![ADSR State Machine Implementation](Images/ADSRState Machine.png)
+        ![ADSR State Machine Implementation](Images/ADSRStateMachine.png)
 
 &nbsp;  
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
