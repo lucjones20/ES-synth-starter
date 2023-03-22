@@ -231,6 +231,21 @@ _//Description & Implementation/Thread/Interrupt_:
 >
 >* _(Also mention: The parts of the code containing "compile-time options" that allowed us to measure the execution time of each task (pt. 14 of *Non-functional specifications*))_
 
+&nbsp;
+### Shared resources 
+* recording vector: Used to store each track and used by scanKeyTask (in menu.cpp with pointer reference as well), displayTask, sendTask and recieveTask. It is protected by the recordMutex semaphore.
+* notesPlayed: used by displayTask and scanKeyTask and it is protected by keyArrayMutex semaphore.
+* keyPress: used by recieveTask and displayTask and it is protected by keyArrayMutex semaphore.
+* amplitudeAmp, amplitudeState, currentStepMap: used by recieveTask, scanKeyTask and sampleISR interrupt. It was a bit more challanging to protect this but achieved thread safety by using an atomic bool and compare swaps. It has two different usege:
+    * One with an if(compare and swap) which tries to acces it, if it is not available it just skips it.
+    * One with a while(compare and swap) which blocks the thread until available -> important for message recieves 
+* queue for outgoing message and incomming message: protected by CAN_TX_Semaphore as detailed in the lab tutorials
+* Knob and menu parameters: many parameters from these classes can be accessed from multiple threads at any time ensured by using atomic variables with atomic operations.
+ 
+ ## Deadlocks:
+ Our implementation according to our analysis is completely deadlock free. The only interdependent mutex usage is using recordingMutex while inside the critical section of keyArrayMutex in scanKey task. However since this is our only interdependent mutex usage it is ensured that even if one of the mutexes are taken they will be freed without requiring the other mutex. 
+
+
 &nbsp;  
 ScanKeyTask: 8430 / 32 = 263 $\mu s$ 
 

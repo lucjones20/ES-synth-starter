@@ -62,15 +62,23 @@ bool disable_blocks = false;
 
 
 
-
+//Knobs
 Knob* volumeKnob;
 Knob* octaveKnob;
 Knob* menuKnob;
 Knob* waveformKnob;
+
+//Key array and note 
+volatile uint8_t keyArray[7];
+std::string notesPlayed;
+//Waveform arrays
+SineArray* sineArray;
+volatile uint32_t array[108];
+volatile int triangleCoeff[88];
+
+//For transmit messages and record incoming mesage to display
 std::string keyPressed;
 uint8_t TX_Message[8];
-
-
 
 //Maps for sound production:
 std::map<uint8_t, std::atomic<uint32_t>> currentStepMap;
@@ -94,7 +102,7 @@ QueueHandle_t msgInQ;
 bool isMultiple = false;
 bool isReciever = true;
 
-
+//ADSR State machine
 bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
   switch (*state)
   {
@@ -114,9 +122,45 @@ bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
   return true;
 }
 
+bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
+  bool peaked;
+  switch (*state)
+  {
+    case 0b010:  //peaked|cBit|pBit
+      *state = 0b011;
+      return true;
+    case 0b011:
+      if(*amplitude > 64) {
+      peaked = true;
+      return false;
+      }
+      else if(*amplitude < 64 && !peaked) *amplitude += 8;
+      else if(*amplitude < 64 && peaked) *amplitude -=2;
+      else if(*amplitude <= 10) return false;
+      else *amplitude -= 2;
+      break;
+    case 0b111:
+      if(*amplitude <= 10 || *amplitude > 64) return false;
+      else if(amplitude >= 48) *amplitude -= 2;
+      else *amplitude = 48;
+      break;
+    case 0b001:
+      *state = 0b000;
+      break;
+    case 0b000:
+      if(*amplitude <= 10 || *amplitude > 64) return false;
+      else *amplitude -= (uint8_t) (*amplitude / (float) 6.67);
+      break;
+    default: 
+      *amplitude = 0;
+    break;
+  }
+  return true;
+}
 
 
-// const Note stepSizes[12] = {
+
+//Pre stored values for the notes
 Note stepSizes[12] = {
     // C
     {"C", uint32_t(4294967296 * f / factor / factor / factor / factor / factor / factor / factor / factor / factor / fs)},
@@ -144,10 +188,7 @@ Note stepSizes[12] = {
    {"B", uint32_t(4294967296 * f * factor * factor / fs)}
 };
 
-double octaveFactors[9] = {1./16., 1./8., 1./4., 1./2., 1, 2, 4, 8, 16};
-
-//Recording stuff
-
+//Adds a keypress/keyrelease to the recordign
 void addKeyStrokeToRecording(Recording* rec,uint8_t index)
   {
     
@@ -164,9 +205,9 @@ void addKeyStrokeToRecording(Recording* rec,uint8_t index)
     }
   }
 
+//Generates the next msg for playback
 void nextStepToPlayback(Recording* rec)
   {
-    
 
     if(rec->curIndex == rec->keyStrokes.size())
       rec->curIndex = 0;
@@ -188,19 +229,20 @@ void nextStepToPlayback(Recording* rec)
 
         amplitudeAmp[rec->keyStrokes[rec->curIndex].first] = 64;
         amplitudeState[rec->keyStrokes[rec->curIndex].first] = 0b10;
-        currentStepMap[rec->keyStrokes[rec->curIndex].first] = (shift >= 0) ? (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize << shift) : (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize >> abs(shift));
+        currentStepMap[rec->keyStrokes[rec->curIndex].first] = 
+          (shift >= 0) ? (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize << shift) 
+          : (stepSizes[rec->keyStrokes[rec->curIndex].first%12].stepSize >> abs(shift));
         rec->pressed.insert(rec->keyStrokes[rec->curIndex].first);
       }
       rec->curIndex++;
       rec->lastPressed = millis();
     }
   }
+//Recording vector and index
 std::vector<Recording*> recordings;
-static void addRecording(){recordings.push_back(new Recording());}
-HardwareTimer *sampleTimer;
 std::atomic<int> recordIndex;
-bool entered_recording = false;
-bool entered_playback = false;
+
+
 
 
 // std::vector<pianoADSR> keyADSR(12);
@@ -218,17 +260,21 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
     delayMicroseconds(2);
     digitalWrite(REN_PIN,LOW);
 }
+
+//Process the key array
 void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
 {
+
+  TX_Message[1] = uint8_t(octaveKnob->getCounter()); //Set octave
+  //If playback add playback msg
   if(Menu::getMode() == PlaybackOn)
     nextStepToPlayback(recordings[recordIndex]);
-  TX_Message[1] = uint8_t(octaveKnob->getCounter());
   for (int i = 0; i < 3; i++)
     for(int j = 0; j < 4; j++)
     {
       bool cBit = (*(currentKeys + i) >> j & 0b1) == 0b0;
       bool pBit = (*(prevKeys + i) >> j & 0b1) == 0b0;
-      if(!cBit && pBit)
+      if(!cBit && pBit) //If key release
       {
         TX_Message[0] = 'R';
         TX_Message[2] = uint8_t(i * 4 + j);
@@ -242,7 +288,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
         }
       }
       
-      else if(cBit && !pBit)
+      else if(cBit && !pBit) //If key press
       {
         TX_Message[0] = 'P';
         TX_Message[2] = uint8_t(i *4 + j);
@@ -261,9 +307,7 @@ void processKeys(volatile uint8_t*  currentKeys, uint8_t* prevKeys)
     }
 }
 
-SineArray* sineArray;
-volatile uint32_t array[108];
-volatile int triangleCoeff[88];
+
 void sampleISR() {
   static int sineCounter[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
   int16_t Vout = 0;
@@ -355,12 +399,9 @@ void sampleISR() {
 void setRow(uint8_t rowIdx){
 	//Disable the row select enable (REN_PIN) first to prevent glitches as the address pins are changed
 	digitalWrite(REN_PIN, LOW);
-
 	digitalWrite(RA0_PIN, LOW);
 	digitalWrite(RA1_PIN, LOW);
   digitalWrite(RA2_PIN, LOW);
-
-	
 	if(rowIdx & 0b1){
 		digitalWrite(RA0_PIN, HIGH);
 	}
@@ -386,14 +427,10 @@ uint8_t readCols(){
 
 	return result;
 }
-JoyStickState readJoystick()
-{
-  return Middle;
-}
 
-std::string notesPlayed;
-volatile uint8_t keyArray[7];
+
 void scanKeysTask(void * pvParameters) {
+    //Init of task
     const TickType_t xFrequency = 75/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
@@ -401,26 +438,18 @@ void scanKeysTask(void * pvParameters) {
     do{
         if(!disable_blocks)  
           vTaskDelayUntil( &xLastWakeTime, xFrequency );
+        //Reading key array
+        xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         for(int i = 0; i < 7; i++){
-            // Only 0-2 for now as thats where keys are - will be expanded to 0 - 7
-            // Delay for parasitic capacitance
             setRow(i);
             delayMicroseconds(3);
-            xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
+            
 
             keyArray[i] = readCols();
-            xSemaphoreGive(keyArrayMutex);
         }
-        xSemaphoreTake(keyArrayMutex, portMAX_DELAY);
         octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
         menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
         waveformKnob->advanceState((keyArray[4] & 0b0100 | keyArray[3] & 0b1000) >> 2);
-        if(Menu::getMode() != Servant)
-        {
-          octaveKnob->advanceState((keyArray[4] & 0b0010) | (keyArray[4] & 0b0001));
-          menuKnob->advanceState((keyArray[3] & 0b0100 | keyArray[3] & 0b1000) >> 2);
-          volumeKnob->advanceState((keyArray[3] & 0b0001) | (keyArray[3] & 0b0010));
-        }
         std::string currentNote_local = "";
         bool expected = true;
         if(mapFlag.compare_exchange_weak(expected, false))
@@ -440,11 +469,11 @@ void scanKeysTask(void * pvParameters) {
         prevKeyArray[0] = keyArray[0];
         prevKeyArray[1] = keyArray[1];
         prevKeyArray[2] = keyArray[2];
+        
         Menu::updateMenu(!(keyArray[6] & 0b1), !(keyArray[6] & 0b10), !(keyArray[5] & 0b1), !(keyArray[5] & 0b10), menuKnob->getCounter());
         recordIndex = Menu::getRecordIndex();
-        xSemaphoreGive(keyArrayMutex);    
         notesPlayed = currentNote_local;
-
+        xSemaphoreGive(keyArrayMutex);    
     }while(!disable_blocks);
 }
 
@@ -510,23 +539,23 @@ void displayUpdateTask(void * pvParameters){
             xSemaphoreTake(recordMutex, portMAX_DELAY);
             u8g2.print(recordIndex.load());
             xSemaphoreGive(recordMutex);
-        }   // write something to the internal memory
+        }   
 
         
         u8g2.setCursor(50,30);
         u8g2.print("W");
         u8g2.print(waveformKnob->getCounter());
-        // u8g2.print("□");
-        u8g2.print("   O:");  //Bastien: just added spaces to separate the W and O on the LCD
+        u8g2.print("   O:");  
         u8g2.print(octaveKnob->getCounter());
         
         u8g2.setCursor(2,30);
+        xSemaphoreTake(keyPressed, portMAX_DELAY);
         u8g2.drawStr(2,30,keyPressed.c_str());
-        // u8g2.drawStr(10,30, "           VOLUME" + str(((Knob *) pvParameters)->getState()));
+        xSemaphoreGive(keyPressed);
         u8g2.setCursor(100,30);
         u8g2.print("V:");
         u8g2.print(volume);
-        u8g2.sendBuffer();          // transfer internal memory to the display
+        u8g2.sendBuffer();// transfer internal memory to the display
 
         //Toggle LED
         digitalToggle(LED_BUILTIN);
@@ -556,8 +585,7 @@ void CAN_RX_Task(void* pvParameters){
         bool expected = true;
         while(!mapFlag.compare_exchange_weak(expected,false)) expected = true;
         int shift = octaveKnob->getCounter() - 4;
-        currentStepMap[msgIn[2] + msgIn[1] * 12] = stepSizes[msgIn[2]].stepSize * octaveFactors[msgIn[1]];
-        // currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
+        currentStepMap[msgIn[2] + msgIn[1] * 12] = (shift >= 0) ? (stepSizes[msgIn[2]].stepSize << shift) : (stepSizes[msgIn[2]].stepSize >> abs(shift));
         amplitudeAmp[msgIn[2] + msgIn[1] * 12] = 64;
         amplitudeState[msgIn[2] + msgIn[1] * 12] = 0b10;
         mapFlag = true;
@@ -587,7 +615,7 @@ void CAN_RX_Task(void* pvParameters){
       }
       
     }
-    local += std::to_string(msgIn[2]);
+    local += std::to_string(msgIn[2]); 
     keyPressed = local;
   }while(!disable_blocks);
 }
@@ -604,12 +632,13 @@ void CAN_RX_ISR (void) {
 void setup() {
     // put your setup code here, to run once:
     mapFlag = true;
-    Menu::setupMen(&recordings);
     CAN_Init(!isMultiple);
     setCANFilter(0x123,0x7ff);
     CAN_Start();
     keyArrayMutex = xSemaphoreCreateMutex();
     recordMutex = xSemaphoreCreateMutex();
+    CAN_TX_Semaphore = xSemaphoreCreateCounting(3,3);
+    Menu::setupMen(&recordings, &recordMutex);
     #ifndef TEST_SCANKEYS
     msgOutQ = xQueueCreate(36,8);
     #endif
@@ -617,7 +646,7 @@ void setup() {
     msgOutQ = xQueueCreate(384,8);
     #endif
     msgInQ = xQueueCreate(36,8);
-    CAN_TX_Semaphore = xSemaphoreCreateCounting(3,3);
+
     CAN_RegisterTX_ISR(CAN_TX_ISR);
     CAN_RegisterRX_ISR(CAN_RX_ISR);
     volumeKnob = new Knob(0,8,5);
@@ -655,6 +684,7 @@ void setup() {
 
     //Timer to trigger interrupt (sampleISR() function)
     #ifndef DISABLE_INTERRUPT
+    HardwareTimer *sampleTimer;
     TIM_TypeDef *Instance = TIM1;
     HardwareTimer *sampleTimer = new HardwareTimer(Instance);
     sampleTimer->setOverflow(22000, HERTZ_FORMAT);

@@ -7,7 +7,6 @@
 
 
 enum Mode{Normal, RecordOn, RecordOff, PlaybackOn, PlaybackOff, Servant};
-enum JoyStickState {Middle, Left, Right, Up, Down};
 struct Recording{
   std::vector<std::pair<uint8_t,uint16_t>> keyStrokes;
   std::set<uint8_t> pressed;

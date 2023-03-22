@@ -13,6 +13,7 @@ private:
     inline static std::atomic<Mode> controlMode;
     inline static std::vector<Recording*>* recs;
     inline static std::atomic<uint8_t> recIndex;
+    inline static SemaphoreHandle_t* recordingMutex;
     inline static int prevCounter;
     static void resetVars()
     {
@@ -40,12 +41,13 @@ private:
 
 
 public:
-    static void setupMen(std::vector<Recording*>* r)
+    static void setupMen(std::vector<Recording*>* r, SemaphoreHandle_t* mutex)
     {
         Menu::recs = r;
         Menu::newRecord = false;
         Menu::onLoop = false;
         prevCounter = 0;
+        recordMutex = mutex;
     }
     static void updateMenu(bool yes, bool no, bool extraButt1, bool extraButt2, uint32_t selectMode) //1. is it confirm, 2. is it cancel, 3. go up, 4 switch mode, 5 change volume, 6 change octave
     {
@@ -63,8 +65,10 @@ public:
                     {
                         if(yes && !newRecord)
                         {
+                            xSemaphoreTake(*recordingMutex, portMAX_DELAY);
                             Menu::recs->push_back(new Recording());
                             Menu::recIndex = recs->size()-1;
+                            xSemaphoreGive(recordingMutex);
                             Menu::newRecord = true;
                             Menu::controlMode = RecordOn;
                         }
@@ -100,6 +104,7 @@ public:
                 case (uint32_t)2:
                     if(Menu::controlMode.load() == PlaybackOff)
                     {
+                        xSemaphoreTake(*recordingMutex, portMAX_DELAY);
                         if(extraButt1 && prevCounter == 0)
                         {
                             decreaseRecIndex();
@@ -110,6 +115,7 @@ public:
                             increaseRecIndex();
                             prevCounter++;
                         }
+                        xSemaphoreGive(recordingMutex);
                         if(yes)
                             Menu::controlMode = PlaybackOn;
                         if(!extraButt1 && !extraButt2)
