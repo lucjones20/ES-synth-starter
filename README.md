@@ -110,12 +110,27 @@ _(add Figures/Videos later when revising...)_
 
     - Sine: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
+    <p align = "center">
+        <img src="Images/Sine.jpg">
+    </p>
+    In order to play a sound wave, we cannot compute the sine in real time because it takes too long. The solution to this is to compute a set of discrete values for all of the sine waves of different frequencies and store those precomputed values into an array. To minimise the data needed we only store one period of each sine wave. To play all the octaves, we need to store 84 sine waves. Using the sampling frequency, we determined the minimum number of samples need for each octave: octave 1 needs 400 values and the number of values halves every octave. The number of samples per second (shown with delta, the time between 2 samples, which stays constant as the frequency changes) does not actually change between the octaves, but the time it takes for a period to complete shrinks as the frequency increases, allowing us to decrease the number of samples needed to accurately play a sine wave.
 
     - Triangle:
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
+    <p align = "center">
+        <img src="Images/tringale.jpeg">
+    </p>
+
+    The triangle waveform is similar to the sawtooth in that it increases and decreases by a fixed stepsize. The step size for the triangle wave is twice the frequency of the sawtooth wave because in the time the sawtooth increases, the triangle has to increase then decrease .Hence the step size needs to be double so that the value of the signal is 0 at the correct time.
 
     - Square: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE AND PERIOD OF SQUARE WAVE]**
+    <p align = "center">
+        <img src = "Images/square.jpeg">
+    </p>
+
+    The square wave is a very basic waveform which is either high or low. The way it was implemented is that when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
+
 
     &nbsp;  
     - >**[DEMO VIDEO CLIP FOR EITHER EACH WAVEFORM IN ACTION OR EACH OF THE INSTRUMENTS]**
