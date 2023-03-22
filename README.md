@@ -20,6 +20,8 @@ Table of Contents
 
 ## 1. Introduction 
 
+![ADSR Graph](ADSR graph.png)
+
 ## 2. Features
 ### 2.1. Core features
 - The synthesizer plays the correct music note with a sawtooth wave and without any delay
