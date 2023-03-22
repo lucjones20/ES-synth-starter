@@ -19,7 +19,7 @@ Table of Contents
 
 &nbsp;  
 ## 1. Introduction 
-&nbsp;  
+<!-- &nbsp;   -->
 
 This project surrounds the embedded software used to program a ST NUCLEO-L432KC microcontroller to control a music synthesiser. Several real-time programming and system analysis techniques were utilised to enable the successful implementation of various different features for the keyboard embedded system, outlined in this documentation.
 
@@ -44,7 +44,7 @@ Group members: Zsombor Klapper, Luc Jones, Bastien Baluyot, Abdal Al-Kilany.
 &nbsp;  
 
 ## 2. Features
-&nbsp;  
+<!-- &nbsp;   -->
 
 ### 2.1. Core features
 &nbsp;  
@@ -71,6 +71,7 @@ Group members: Zsombor Klapper, Luc Jones, Bastien Baluyot, Abdal Al-Kilany.
 
     - **Overloading safety measures**: After each key's release, the elements are erased from the array and Vout is saturated to be in the range of [-127, 127] so that the Vout written using analogWrite is saturated to [1,255] and the voltage range is limited safely to 0-3.3V.
 
+    - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
 
 &nbsp;  
 - b. Octave Knob
@@ -88,47 +89,76 @@ Group members: Zsombor Klapper, Luc Jones, Bastien Baluyot, Abdal Al-Kilany.
 
         - R - Release: Finally, the current volume is decreased back to 0/minimum in the Release phase. This is usually a non-linear decay and is implemented as such.
 
+        - >**[PICTURE OF GRAPH FOR ADSR]**
+    
+
     - The ADSR Envelope feature was implemented with a state machine that reduces the max volume of the sound output according to the phase and stage/progression in the phase.
+
+    - >**[PICTURE OF ADSR STATE MACHINE]**
 
 &nbsp;  
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
     - In addition to the core sawtooth waveform, sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of Knob X.   
 
     - Sine: 
-        - Range: 
-        - Period:
-        - Resolution: 
-        - Implementation: LUT?  
+    >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
 
     - Triangle:
-        - Range: 
-        - Period:
-        - Resolution: 
-        - Implementation:  
+    >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
 
     - Square: 
-        - Range: 
-        - Period:
-        - Resolution: 
-        - Implementation: 
+    >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE AND PERIOD OF SQUARE WAVE]**
+
+    &nbsp;  
+    - >**[DEMO VIDEO CLIP FOR EITHER EACH WAVEFORM IN ACTION OR EACH OF THE INSTRUMENTS]**
 
 &nbsp;  
-- e. Other instruments
-    - ...
+- e. Additional Instruments
+    - Following the implementation of additional waveforms and ADSR Envelope modulation for the synthesis of music, the synthesis of different, additional instruments were made possible. Each instrument corresponds to a waveform and an ADSR ratio, as shown in the table [1].
 
         | Instrument | A | D | S | R | Waveform |
         | :----: | :----: | :----: | :----: | :----: | :----: |
+        | Piano | 0 | 9 | 0 | 9 | Sawtooth |
         | Flute | 6 | 0 | 8 | 0 | Square |
         | Violin | 10 | 8 | 10 | 9 | Square |
         | Cello | 0 | 9 | 0 | 0 | Square |
-        | Piano | 0 | 9 | 0 | 9 | Sawtooth |
 
-    - each instruments..... 
-        - *the piano has no Attack phase so still satisfies the "no perceptible delay" part of the core specs...
+    - The most basic sound, the sound of a piano, uses the default sawtooth waveform and inherently has no Attack/Sustain phase. Therefore, the core specification is still satisfied since there is no perceptible delay between initially pressing the key and the volume reaching maximum.
+    
+
 
 &nbsp;  
 - f. Recording & Playback
     - ...
+
+    &nbsp; 
+    - Recording: ...
+
+    &nbsp;  
+    - Playback: The recorded keys are played back using the currently selected waveform on the keyboard.
+
+    - >**[DEMO VIDEO CLIP FOR RECORDING & PLAYBACK]**
+
+&nbsp;  
+- g. Menu 
+
+    - The menu allows for interaction and is displayed on the OLED display. The following information/settings are displayed on the menu:
+        - Note(s) being played
+
+        - Waveform (Sawtooth/Triangle/Sine/Square)
+        - Octave (0-7)
+        - Volume level (0-8) 
+        - Recording (On/Off) or Playback (On/Off) setting
+
+    &nbsp;  
+    - >**[PICTURE OF THE MENU]**
+
+    - >**[PICTURE OF STATE MACHINE OF THE MENU...]**
+
+    &nbsp;  
+    - _(Does the menu display any information regarding whether there are other keyboard modules connected? e.g. East/West...)_
+
+    - >**[DEMO VIDEO CLIP OF NAVIGATION OF MENU]**
 
 &nbsp;  
 &nbsp;  
@@ -180,20 +210,21 @@ _//Description & Implementation/Thread/Interrupt_:
 
 
 
-
+&nbsp;  
 ## 4. Analysis
-* _(Include, in this section, pt. 19, 20 & 21 of the *Documentation Specifications*)_
-* _(Probably re-do these tests at the end...)_
+>* _(Include, in this section, pt. 19, 20 & 21 of the *Documentation Specifications*)_
+>* _(Probably re-do these tests at the end...)_
+>
+>* _(Also mention: The parts of the code containing "compile-time options" that allowed us to measure the execution time of each task (pt. 14 of *Non-functional specifications*))_
 
-* _(Also mention: The parts of the code containing "compile-time options" that allowed us to measure the execution time of each task (pt. 14 of *Non-functional specifications*))_
-
+&nbsp;  
 ScanKeyTask: 8430 / 32 = 263 $\mu s$ 
 
 displayUpdateTask: 554261 / 32 = 17 320 $\mu s$ 
 
 sampleISR: 689 / 32 = 21.5 $\mu s$  
 
-
+&nbsp;  
 ## 5. References
 [1] - F. W. Wibowo, “The Detection of Signal on Digital Audio Synthesizer Based-On Propeller,” _Advanced Science Letters_, vol. 23, no. 6, pp. 5472–5475, Jun. 2017, doi: https://doi.org/10.1166/asl.2017.7402.
 ‌
