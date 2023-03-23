@@ -181,7 +181,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - **Playback:** The recorded keys are played back using the currently selected waveform on the keyboard. It works the same way as if extra incoming messages from other boards would be interpreted onto the board, thus allowing extra keypresses to be played on top of it. As a result, one can produce complex plays which would otherwise require multiple people. 
     
     
-    &nsbp;  
+&nsbp;  
     
     - > [_Recording & Playback demo video_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
 
