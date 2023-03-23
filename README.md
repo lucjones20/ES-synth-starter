@@ -281,10 +281,6 @@ This interrupt is called whenever a message is recieved and copies it to from th
 
 &nbsp;  
 ## 4. Analysis
->* _(Include, in this section, pt. 19, 20 & 21 of the *Documentation Specifications*)_
->* _(Probably re-do these tests at the end...)_
->
->* _(Also mention: The parts of the code containing "compile-time options" that allowed us to measure the execution time of each task (pt. 14 of *Non-functional specifications*))_
 
 &nbsp;
 ### 4.1. Shared Resources 
