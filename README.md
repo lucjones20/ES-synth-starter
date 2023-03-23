@@ -77,6 +77,11 @@ _(add Figures/Videos later when revising...)_
     - **Overloading safety measures**: After each key's release, the elements are erased from the array and Vout is saturated to be in the range of [-127, 127] so that the Vout written using analogWrite is saturated to [1,255] and the voltage range is limited safely to 0-3.3V.
 
     - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
+    
+
+<img width="50" src="https://user-images.githubusercontent.com/106097477/227254823-6cab3f5c-33e8-4aa6-98e1-51e935fd22e6.mp4" />
+
+
 
 &nbsp;  
 - b. Octave Knob
@@ -146,7 +151,7 @@ _(add Figures/Videos later when revising...)_
         | Violin | 10 | 8 | 10 | 9 | Square |
         | Cello | 0 | 9 | 0 | 0 | Square |
     
-    - The most basic sound, the sound of a piano, uses the default sawtooth waveform and inherently has no Attack/Sustain phase. Therefore, the core specification is still satisfied since there is no perceptible delay between initially pressing the key and the volume reaching maximum.
+    - The most basic sound, the sound of a piano, uses the default sawtooth waveform and inherently has no Attack/Sustain phase, as in a piano, there is no audible sound made when the key is first pressed and the hammer inside the piano is in motion to strike the string below. There is no Sustain phase as even if the hammer is held against the string it will stop the sound from decaying. Therefore, the core specification is still satisfied since there is no perceptible delay between initially pressing the key and the volume reaching maximum.
     
 
 
@@ -280,7 +285,17 @@ _//Description & Implementation/Thread/Interrupt_:
 
 ### 4.4. CPU Utilisation
 
-- ...
+## Rate Monotonic Scheduler Critical Instant Analysis
+| Task Name | Initiation Interval ($τ_i$) | Execution Time ($T_i$) | $[\frac{τ_n}{τ_i}]$ | $[\frac{τ_n}{τ_i}]T_i$| CPU Utilisation $[\frac{T_i}{τ_i}]$ |
+| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
+| scanKeysTask | 25 ms | 0.263 ms | 4 | 0.355 ms | 0.355% |
+| displayUpdateTask | 100 ms | 17.32 ms | 1 | 16.27 ms | 16.27% |
+| sampleISR | 0.045 ms | 0.0215 ms | 5000 | 74.4 ms | 74.4% |
+| decodeTask | 0.512 ms | 0.02866 ms | 195 | 5.5887 ms | 5.5887% |
+| CAN_RX_ISR | 0.512 ms | 0.005639 ms | 195 | 1.10 ms | 1.10% |
+| CAN_TX_Task | 0.512 ms | 0.00815 ms | 195 | 1.589 ms | 1.589% |
+| CAN_TX_ISR | 0.512 ms | 0.0030375 ms | 195 | 0.592 ms | 0.592% |
+| Total | _ | _ | _ | 99.89495 ms | 99.89% |
 
 
 &nbsp;  
