@@ -120,7 +120,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - Sine: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
     <p align = "center">
-        <img src="Images/Sine.jpg" width=75% height=75%>
+        <img src="Images/Sine.jpg" width=70% height=70%>
     </p>
 
     In order to play a sound wave, we cannot compute the sine values in real time since it takes too long (computational limitation). Our solution to this is to compute a set of discrete values for all of the sine waves of different frequencies and store those precomputed values into an array. To minimise the data needed, we only store one period of each sine wave. 
@@ -133,7 +133,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - Triangle:
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
     <p align = "center">
-        <img src="Images/triangle.jpeg" width=75% height=75%>
+        <img src="Images/triangle.jpeg" width=70% height=70%>
     </p>
 
     The triangle waveform is similar to the sawtooth in that it increases and decreases by a fixed stepsize. The step size for the triangle wave is twice the frequency of the sawtooth wave since, in the time the sawtooth increases, the triangle has to increase then decrease. Hence, the step size needs to be double so that the value of the signal is 0 at the correct time.
@@ -142,7 +142,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - Square: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE AND PERIOD OF SQUARE WAVE]**
     <p align = "center">
-        <img src = "Images/square.jpeg" width=75% height=75%>
+        <img src = "Images/square.jpeg" width=70% height=70%>
     </p>
 
     The square wave is a relatively basic waveform which is either high or low. Its implementation follows such that, when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
@@ -219,9 +219,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
 &nbsp;  
 ## 3. Tasks and Interrupts
->* _(For each task, include: method of implementation, thread or interrupt + theoretical minimum initiation interval and measured maximum execution time + a critical instant analysis of the rate monotonic scheduler, showing that all deadlines are met under worst-case conditions)_
-
-&nbsp;  
+  
 ### 3.1. ScanKeyTask
 The scanKeyTask is the most versatile task, it handles keyArray reads and regestering them into the desired paramaters spaces(Knobs, Menu, etc...). It also generates messages for the CAN task and inputs for the sampleISR() sound generator. ADSR stepping happens here as well because we can affor more costly calculations here.
 
@@ -282,7 +280,6 @@ This interrupt is called whenever a message is recieved and copies it to from th
 &nbsp;  
 ## 4. Analysis
 
-&nbsp;
 ### 4.1. Shared Resources 
 * recording vector: Used to store each track and used by scanKeyTask (in menu.cpp with pointer reference as well), displayTask, sendTask and recieveTask. It is protected by the recordMutex semaphore.
 * notesPlayed: Used by displayTask and scanKeyTask and it is protected by keyArrayMutex semaphore.
