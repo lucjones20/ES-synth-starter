@@ -136,7 +136,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     &nbsp;  
     >- **[Graph for the Sine waveform implementation:]**
     <p align = "center">
-        <img src="Images/Sine.jpg" width=70% height=45%>
+        <img src="Images/Sine.jpg" width=55% height=40%>
     </p>
 
     In order to play a sound wave, we cannot compute the sine values in real time since it takes too long (computational limitation). Our solution to this is to compute a set of discrete values for all of the sine waves of different frequencies and store those precomputed values into an array. To minimise the data needed, we only store one period of each sine wave. 
