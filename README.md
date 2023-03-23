@@ -226,18 +226,18 @@ This project was completed by Electrical Engineering students from Imperial Coll
 ### 3.1. ScanKeyTask
 The scanKeyTask is the most versatile task, it handles keyArray reads and regestering them into the desired paramaters spaces(Knobs, Menu, etc...). It also generates messages for the CAN task and inputs for the sampleISR() sound generator. ADSR stepping happens here as well because we can affor more costly calculations here.
 
-- Initiation Interval: 20 milliseconds - decreased from original 50 milliseconds in order for knobs to be read more accurately.
-- Measured Maximum Execution Time: 241 microseconds
+- Initiation Interval: 20 milliseconds
+- Measured Maximum Execution Time: 241 microseconds (all 12 keys pressed)
 - Critical instant analysis of the rate monotic scheduler: shown below
 
-> - Mention how we could increase the frequency, allowing for better reading of the knob states (they are not as well-functioning since the detents are not read as properly due to intermediate states...). Just acknowledge this consideration..
+NOTE: The frequency was decreased from the original 50 milliseconds in order for knobs to be read more accurately. this is because are not as well-functioning since the detents are not read as properly due to intermediate states.
 
 &nbsp;  
 ### 3.2. DisplayUpdateTask
 The DisplayUpdateTask's only responsibility is to update the screen based on the initial parameters. It displays whether the synthesiseris in normal mode, recording mode, or playback mode. It also displays the current waveform, volume and octave number for each knob. Each key currently pressed(or still playing sound as it is in 'release' phase).
 
 - Initiation Interval: 100 milliseconds
-- Measured Maximum Execution Time: 18604 microseconds
+- Measured Maximum Execution Time: 18604 microseconds (all 12 keys pressed)
 - Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
@@ -245,7 +245,7 @@ The DisplayUpdateTask's only responsibility is to update the screen based on the
 SampleISR is an interrupt that produces the desired vout for the audio output.
 
 - Initiation Interval: 45.45 microseconds
-- Measured Maximum Execution Time: 28.0  microseconds
+- Measured Maximum Execution Time: 28.0  microseconds (all 12 keys pressed)
 - Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
@@ -333,6 +333,13 @@ This interrupt is called whenever a message is recieved and copies it to from th
 | CAN_TX_Task (36 iterations)| 60 ms | 0.432 ms | 1.67 | 0.72% |
 | CAN_TX_ISR (36 iterations)| 60 ms | 0.187 ms | 1.67 | 0.312% |
 | Total | _ | _ | _ | 88.295% |
+
+As we can see, all deadlines are met, even under worst case conditions.
+The worst case would be if all tasks were under their worst conditions, shown above. 
+In a 100 milliseconds interval, this would only mean that the CPU is used for 88.295 milliseconds.
+This totals for a 88.295% maximum CPU utilisation under worst case scenarios.
+This shows that even with all the tasks going on top of one another, under worst conditions the CPU is not maximally utilised.
+sampleISR accounts for 61.6% of the CPU utilisation alone, and the only other tasks or interrupts utilising a significant proportion(>2%) are displayUpdateTask and CAN_RX_Task.
 
 
 &nbsp;  
