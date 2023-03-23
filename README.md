@@ -113,7 +113,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
             <img src="Images/ADSRStateMachine.png"  width=75% height=75%>
         </p>
 
-    >- [ADSR demo video (also showcasing Polyphony feature)](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/ETukwHkI3oRIr0NWmSd-kucBcjja7p5IqlWho3pAgnwl3w?e=NzFCTo)
+    >- [_ADSR demo video (also showcasing Polyphony feature)_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/ETukwHkI3oRIr0NWmSd-kucBcjja7p5IqlWho3pAgnwl3w?e=NzFCTo)
 
 &nbsp;  
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
@@ -153,6 +153,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
     &nbsp;  
     - >**[DEMO VIDEO CLIP FOR EITHER EACH WAVEFORM IN ACTION OR EACH OF THE INSTRUMENTS]**
 
+    >- [_ADSR demo video (also showcasing Polyphony feature)_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/ETukwHkI3oRIr0NWmSd-kucBcjja7p5IqlWho3pAgnwl3w?e=NzFCTo)
+
 &nbsp;  
 - e. Additional Instruments
     - Following the implementation of additional waveforms and ADSR Envelope modulation for the synthesis of music, the synthesis of different, additional instruments were made possible. Each instrument corresponds to a waveform and an ADSR ratio, as shown in the table [[1](#5-references)].
@@ -180,11 +182,10 @@ This project was completed by Electrical Engineering students from Imperial Coll
     
     
 
-    - >**DEMO VIDEO CLIP FOR RECORDING & PLAYBACK: **
-    - >
-    - > [Recording & Playback demo video](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
 
-    
+    - > [_Recording & Playback demo video_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
+
+ 
 
 &nbsp;  
 - g. Menu 
