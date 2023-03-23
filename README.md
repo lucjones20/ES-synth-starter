@@ -220,7 +220,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     &nbsp;  
 
 
-    - > The interface and navigation of the Menu is showcased and demonstrated in the [Recording & Playback video](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO). 
+    - > The interface and navigation of the Menu is showcased and demonstrated in the [_Recording & Playback demo video_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO). 
 
 
 
