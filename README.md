@@ -119,10 +119,10 @@ This project was completed by Electrical Engineering students from Imperial Coll
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
     - In addition to the core [sawtooth waveform](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EeyMw0rTvfZIuIy_lxkftt0Bu_llnUUaBiwqy3r2RT3Wig?e=9WmgLa), sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
 
-    - Sine: 
+    - **Sine**: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
     <p align = "center">
-        <img src="Images/Sine.jpg" width=70% height=70%>
+        <img src="Images/Sine.jpg" width=70% height=55%>
     </p>
 
     In order to play a sound wave, we cannot compute the sine values in real time since it takes too long (computational limitation). Our solution to this is to compute a set of discrete values for all of the sine waves of different frequencies and store those precomputed values into an array. To minimise the data needed, we only store one period of each sine wave. 
@@ -134,7 +134,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     >- [_Sine waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EZejVRKzGgREsew1qVKsUuwBiEKyCr4IKVVZNyFzdEPq6Q?e=51h0h2)
 
     &nbsp;  
-    - Triangle:
+    - **Triangle**:
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
     <p align = "center">
         <img src="Images/triangle.jpeg" width=70% height=70%>
@@ -145,7 +145,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     >- [_Triangle waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EcUlaaVXOTtLtEZLXyxDSIgBER9yQimpYfB7LkD3PvkGYQ?e=vmgP2H)
 
     &nbsp;
-    - Square: 
+    - **Square**: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE AND PERIOD OF SQUARE WAVE]**
     <p align = "center">
         <img src = "Images/square.jpeg" width=70% height=70%>
