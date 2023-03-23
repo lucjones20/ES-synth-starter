@@ -117,7 +117,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
 &nbsp;  
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
-    - In addition to the core sawtooth waveform, sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
+    - In addition to the core [sawtooth waveform](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EeyMw0rTvfZIuIy_lxkftt0Bu_llnUUaBiwqy3r2RT3Wig?e=9WmgLa), sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
 
     - Sine: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
@@ -131,6 +131,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
     
     The number of samples per second (shown with $\Delta$, the time between 2 samples, which stays constant as the frequency changes) does not actually change between the octaves, but the time it takes for a period to complete shrinks as the frequency increases, allowing us to decrease the number of samples needed to accurately play a sine wave.
 
+    >- [_Sine waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EZejVRKzGgREsew1qVKsUuwBiEKyCr4IKVVZNyFzdEPq6Q?e=51h0h2)
+
     &nbsp;  
     - Triangle:
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
@@ -139,6 +141,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
     </p>
 
     The triangle waveform is similar to the sawtooth in that it increases and decreases by a fixed stepsize. The step size for the triangle wave is twice the frequency of the sawtooth wave since, in the time the sawtooth increases, the triangle has to increase then decrease. Hence, the step size needs to be double so that the value of the signal is 0 at the correct time.
+
+    >- [_Triangle waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EcUlaaVXOTtLtEZLXyxDSIgBER9yQimpYfB7LkD3PvkGYQ?e=vmgP2H)
 
     &nbsp;
     - Square: 
@@ -149,11 +153,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
     The square wave is a relatively basic waveform which is either high or low. Its implementation follows such that, when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
 
+    >- [_Square waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EcvFZQimqjRNprf7M6wle_4BT5R5pCE-dawbKat3s-zAzA?e=loTrqI)
 
-    &nbsp;  
-    - >**[DEMO VIDEO CLIP FOR EITHER EACH WAVEFORM IN ACTION OR EACH OF THE INSTRUMENTS]**
-
-    >- [_ADSR demo video (also showcasing Polyphony feature)_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/ETukwHkI3oRIr0NWmSd-kucBcjja7p5IqlWho3pAgnwl3w?e=NzFCTo)
 
 &nbsp;  
 - e. Additional Instruments
