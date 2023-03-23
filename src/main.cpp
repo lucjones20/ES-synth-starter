@@ -100,7 +100,7 @@ QueueHandle_t msgOutQ;
 QueueHandle_t msgInQ;
 
 //Enviroment control variables
-bool isMultiple = false;
+bool isMultiple = true;
 bool isReciever = false;
 
 //ADSR State machine
