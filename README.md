@@ -180,7 +180,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
     - >**[DEMO VIDEO CLIP FOR RECORDING & PLAYBACK]**
     
-    https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO
+    [Recording demo](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
+
     
 
 &nbsp;  
