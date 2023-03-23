@@ -120,7 +120,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - In addition to the core [sawtooth waveform](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EeyMw0rTvfZIuIy_lxkftt0Bu_llnUUaBiwqy3r2RT3Wig?e=9WmgLa), sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
 
     - **Sine**: 
-    >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
+    &nbsp;  
+    >- **[Graph of Vout vs. Phase for the Sine waveform implementation:]**
     <p align = "center">
         <img src="Images/Sine.jpg" width=70% height=55%>
     </p>
@@ -135,7 +136,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
     &nbsp;  
     - **Triangle**:
-    >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
+    &nbsp;  
+    >- **[Graph of Vout vs. Phase for the Triangle waveform implementation:]**
     <p align = "center">
         <img src="Images/triangle.jpeg" width=70% height=70%>
     </p>
@@ -146,7 +148,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
     &nbsp;
     - **Square**: 
-    >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE AND PERIOD OF SQUARE WAVE]**
+    &nbsp;  
+    >- **[Graph of Vout vs. Phase for the Square waveform implementation:]**
     <p align = "center">
         <img src = "Images/square.jpeg" width=70% height=70%>
     </p>
