@@ -119,6 +119,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
     - In addition to the core [sawtooth waveform](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EeyMw0rTvfZIuIy_lxkftt0Bu_llnUUaBiwqy3r2RT3Wig?e=9WmgLa), sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
 
+    &nbsp; 
     - **Square**: 
     &nbsp;  
     >- **[Graph for the Square waveform implementation:]**
@@ -130,7 +131,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
     >- [_Square waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EcvFZQimqjRNprf7M6wle_4BT5R5pCE-dawbKat3s-zAzA?e=loTrqI)
 
-
+    &nbsp; 
     - **Sine**: 
     &nbsp;  
     >- **[Graph for the Sine waveform implementation:]**
