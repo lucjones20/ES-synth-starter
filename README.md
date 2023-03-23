@@ -77,10 +77,13 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
     - **Overloading safety measures**: After each key's release, the elements are erased from the array and Vout is saturated to be in the range of [-127, 127] so that the Vout written using analogWrite is saturated to [1,255] and the voltage range is limited safely to 0-3.3V.
 
+
+
+
+
     - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
     
-
-    https://user-images.githubusercontent.com/106097477/227254823-6cab3f5c-33e8-4aa6-98e1-51e935fd22e6.mp4
+    https://user-images.githubusercontent.com/94132373/227359053-b430d50c-d246-4c0c-a9b1-5dc386f3bd6c.mp4
 
 
 
