@@ -100,7 +100,7 @@ QueueHandle_t msgInQ;
 
 //Enviroment control variables
 bool isMultiple = true;
-bool isReciever = true;
+bool isReciever = false;
 
 //ADSR State machine
 bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
