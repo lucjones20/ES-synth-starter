@@ -83,7 +83,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
     - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
     
-    https://user-images.githubusercontent.com/94132373/227359053-b430d50c-d246-4c0c-a9b1-5dc386f3bd6c.mp4
+
 
 
 
@@ -178,9 +178,9 @@ This project was completed by Electrical Engineering students from Imperial Coll
     
     
 
-    - >**[DEMO VIDEO CLIP FOR RECORDING & PLAYBACK]**
+    - >**DEMO VIDEO CLIP FOR RECORDING & PLAYBACK: **
     
-    [Recording demo](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
+    - > [Recording & Playback demo video](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
 
     
 
@@ -194,13 +194,8 @@ This project was completed by Electrical Engineering students from Imperial Coll
         - Octave (0-7)
         - Volume level (0-8) 
         - Recording (On/Off) or Playback (On/Off) setting
-
+        
     &nbsp;  
-    - >**[PICTURE OF THE MENU]**
-
-    - >**[PICTURE OF STATE MACHINE OF THE MENU...]**
-
-    &nbsp;
     - **Record & Playback controls:** The Record and Playback states are controlled using Knob presses in the following way: 
     
         - Knob0 - Start
@@ -218,7 +213,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     &nbsp;  
 
 
-    - >**[DEMO VIDEO CLIP OF NAVIGATION OF MENU]**
+    - > The interface and navigation of the Menu is showcased and demonstrated in the [Recording & Playback video](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO). 
 
 
 
