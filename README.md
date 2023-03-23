@@ -81,7 +81,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
 
 
-    - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
+    - > _The Polyphony feature is included and demonstrated in the [demo video clip of another feature, ADSR Envelopes](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/ETukwHkI3oRIr0NWmSd-kucBcjja7p5IqlWho3pAgnwl3w?e=NzFCTo)._
     
 
 
@@ -114,7 +114,6 @@ This project was completed by Electrical Engineering students from Imperial Coll
         </p>
 
     >- **DEMO VIDEO CLIP FOR ADSR (also showcasing Polyphony feature): **
-    > 
     >- [ADSR demo video (also showcasing Polyphony feature)](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/ETukwHkI3oRIr0NWmSd-kucBcjja7p5IqlWho3pAgnwl3w?e=NzFCTo)
 
 &nbsp;  
