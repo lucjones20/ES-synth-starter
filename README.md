@@ -77,6 +77,10 @@ _(add Figures/Videos later when revising...)_
     - **Overloading safety measures**: After each key's release, the elements are erased from the array and Vout is saturated to be in the range of [-127, 127] so that the Vout written using analogWrite is saturated to [1,255] and the voltage range is limited safely to 0-3.3V.
 
     - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
+    
+<video width="320" height="240" controls>
+    <source src="Videos/VideoTest.mp4" type="video/mp4">
+</video>
 
 &nbsp;  
 - b. Octave Knob
