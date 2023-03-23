@@ -14,6 +14,8 @@ Table of Contents
     3.3. [sampleISR](#33-sampleisr)    
     3.4. [CAN_TX_Task](#34-can\_tx\_task)  
     3.5. [CAN_RX_Task](#35-can\_rx\_task)  
+    3.6. [CAN_TX_ISR](#36-can\_tx\_isr)  
+    3.7. [CAN_RX_ISR](#37-can\_rx\_isr)  
 4. [Analysis](#4-analysis)   
 5. [References](#5-references)  
 
@@ -43,7 +45,7 @@ This project surrounds the embedded software used to program a ST NUCLEO-L432KC 
 
 This project was completed by Electrical Engineering students from Imperial College London for the 2nd Coursework of the ELEC60013 - Embedded Systems module.
 
-**Group members:** Zsombor Klapper, Luc Jones, Bastien Baluyot, Abdal Al-Kilany.
+**Group members:** Zsombor Klapper, Luc Jones, Bastien Baluyot, Abdel-Qader Al-Kilany.
 
 &nbsp;  
 
@@ -115,7 +117,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - Sine: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
     <p align = "center">
-        <img src="Images/Sine.jpg">
+        <img src="Images/Sine.jpg" width=75% height=75%>
     </p>
 
     In order to play a sound wave, we cannot compute the sine values in real time since it takes too long (computational limitation). Our solution to this is to compute a set of discrete values for all of the sine waves of different frequencies and store those precomputed values into an array. To minimise the data needed, we only store one period of each sine wave. 
@@ -128,7 +130,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - Triangle:
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
     <p align = "center">
-        <img src="Images/triangle.jpeg">
+        <img src="Images/triangle.jpeg" width=75% height=75%>
     </p>
 
     The triangle waveform is similar to the sawtooth in that it increases and decreases by a fixed stepsize. The step size for the triangle wave is twice the frequency of the sawtooth wave since, in the time the sawtooth increases, the triangle has to increase then decrease. Hence, the step size needs to be double so that the value of the signal is 0 at the correct time.
@@ -137,7 +139,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     - Square: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE AND PERIOD OF SQUARE WAVE]**
     <p align = "center">
-        <img src = "Images/square.jpeg">
+        <img src = "Images/square.jpeg" width=75% height=75%>
     </p>
 
     The square wave is a relatively basic waveform which is either high or low. Its implementation follows such that, when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
@@ -229,7 +231,7 @@ The scanKeyTask is the most versatile task, it handles keyArray reads and regest
 
 &nbsp;  
 ### 3.2. DisplayUpdateTask
-The DisplayUpdateTask's only responsibility is to update the screen based on the initial parameters. 
+The DisplayUpdateTask's only responsibility is to update the screen based on the initial parameters. It displays whether the synthesiseris in normal mode, recording mode, or playback mode. It also displays the current waveform, volume and octave number for each knob. Each key currently pressed(or still playing sound as it is in 'release' phase).
 
 - Initiation Interval: 100 milliseconds
 - Measured Maximum Execution Time: 18604 microseconds
@@ -239,15 +241,15 @@ The DisplayUpdateTask's only responsibility is to update the screen based on the
 ### 3.3. SampleISR
 SampleISR is an interrupt that produces the desired vout for the audio output.
 
-- Initiation Interval: 4.5 microseconds
-- Measured Maximum Execution Time: 28.0 microseconds microseconds
+- Initiation Interval: 45.45 microseconds
+- Measured Maximum Execution Time: 28.0  microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 &nbsp;  
 ### 3.4. CAN_TX_Task
 The CAN_TX_Task is responsible for initialising the send process of the CAN bus. It puts everything which is in the msgOut queue into the send buffer. 
 
-- Initiation Interval: 60 ms
+- Initiation Interval: 60 ms for 36 iterations
 - Measured Maximum Execution Time: 12 microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
@@ -255,7 +257,7 @@ The CAN_TX_Task is responsible for initialising the send process of the CAN bus.
 ### 3.5. CAN_RX_Task
 The CAN_RX_Task is responsible from interpeting the incoming messages and execute their action.
 
-- Initiation Interval: 
+- Initiation Interval: 25.2 ms for 36 iterations
 - Measured Maximum Execution Time: 82.7 microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
@@ -285,13 +287,13 @@ This interrupt is called whenever a message is recieved and copies it to from th
 &nbsp;
 ### 4.1. Shared Resources 
 * recording vector: Used to store each track and used by scanKeyTask (in menu.cpp with pointer reference as well), displayTask, sendTask and recieveTask. It is protected by the recordMutex semaphore.
-* notesPlayed: used by displayTask and scanKeyTask and it is protected by keyArrayMutex semaphore.
-* keyPress: used by recieveTask and displayTask and it is protected by keyArrayMutex semaphore.
-* amplitudeAmp, amplitudeState, currentStepMap: used by recieveTask, scanKeyTask and sampleISR interrupt. It was a bit more challanging to protect this but achieved thread safety by using an atomic bool and compare swaps. It has two different usege:
+* notesPlayed: Used by displayTask and scanKeyTask and it is protected by keyArrayMutex semaphore.
+* keyPress: Used by recieveTask and displayTask and it is protected by keyArrayMutex semaphore.
+* amplitudeAmp, amplitudeState, currentStepMap: Used by recieveTask, scanKeyTask and sampleISR interrupt. It was a bit more challanging to protect this but achieved thread safety by using an atomic bool and compare swaps. It has two different usege:
     * One with an if(compare and swap) which tries to acces it, if it is not available it just skips it.
     * One with a while(compare and swap) which blocks the thread until available -> important for message recieves 
-* queue for outgoing message and incomming message, which are memory safe by definition
-* Knob and menu parameters: many parameters from these classes can be accessed from multiple threads at any time ensured by using atomic variables with atomic operations.
+* queue for outgoing message and incomming message, which are memory safe by definition.
+* Knob and menu parameters: any parameters from these classes can be accessed from multiple threads at any time ensured by using atomic variables with atomic operations.
  
 &nbsp;
 ### 4.2. Deadlocks
@@ -307,27 +309,27 @@ This interrupt is called whenever a message is recieved and copies it to from th
 
 * sampleISR: 895 / 32 = 28.0 $\mu s$  
 
-* CAN_TX_Task: 384 / 32 = 12 $\mu s$  
+* CAN_TX_Task: 432 / 36 = 12 $\mu s$  
 
-* CAN_RX_Task: 992 / 32 = 82.7 $\mu s$  
+* CAN_RX_Task: 1116 / 36 = 82.7 $\mu s$  
 
-* CAN_TX_ISR: 167 / 32 = 5.2 $\mu s$  
+* CAN_TX_ISR: 187 / 36 = 5.2 $\mu s$  
 
-* CAN_RX_ISR: 320 / 32 = 10 $\mu s$  
+* CAN_RX_ISR: 360 / 36 = 10 $\mu s$  
 
 
 &nbsp;  
 ### 4.4. CPU Utilisation - Rate Monotonic Scheduler Critical Instant Analysis
-| Task Name | Initiation Interval ($τ_i$) | Execution Time ($T_i$) | $[\frac{τ_n}{τ_i}]$ | $[\frac{τ_n}{τ_i}]T_i$| CPU Utilisation $[\frac{T_i}{τ_i}]$ |
+| Task Name | Initiation Interval  ($τ_i$) | Execution Time  ($T_i$) | $[\frac{τ_n}{τ_i}]$ | CPU Utilisation $[\frac{T_i}{τ_i}]$ |
 | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
-| scanKeysTask | 25 ms | 0.263 ms | 4 | 0.355 ms | 0.355% |
-| displayUpdateTask | 100 ms | 17.32 ms | 1 | 16.27 ms | 16.27% |
-| sampleISR | 0.045 ms | 0.0215 ms | 5000 | 74.4 ms | 74.4% |
-| decodeTask | 0.512 ms | 0.02866 ms | 195 | 5.5887 ms | 5.5887% |
-| CAN_RX_ISR | 0.512 ms | 0.005639 ms | 195 | 1.10 ms | 1.10% |
-| CAN_TX_Task | 0.512 ms | 0.00815 ms | 195 | 1.589 ms | 1.589% |
-| CAN_TX_ISR | 0.512 ms | 0.0030375 ms | 195 | 0.592 ms | 0.592% |
-| Total | _ | _ | _ | 99.89495 ms | 99.89% |
+| scanKeysTask | 20 ms | 0.241 ms | 5 | 0.355% |
+| displayUpdateTask | 100 ms | 18.60 ms | 1 | 18.6% |
+| sampleISR | 0.045 ms | 0.028 ms | 22000 | 61.6% |
+| CAN_RX_Task (36 iterations)| 25.2 ms | 1.116 ms | 3.97 | 4.429% |
+| CAN_RX_ISR (36 iterations)| 0.512 ms | 0.360 ms | 195 | 1.10% |
+| CAN_TX_Task (36 iterations)| 60 ms | 0.432 ms | 1.67 | 0.72% |
+| CAN_TX_ISR (36 iterations)| 0.512 ms | 0.187 ms | 195 | 0.592% |
+| Total | _ | _ | _ | 99.89% |
 
 
 &nbsp;  

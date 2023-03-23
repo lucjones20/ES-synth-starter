@@ -20,12 +20,12 @@
 
 //Test switches:
 bool disable_blocks = false;
-// #define DISABLE_THREADS
-// #define DISABLE_INTERRUPT
+#define DISABLE_THREADS
+#define DISABLE_INTERRUPT
 // #define TEST_SCANKEYS
 // #define TEST_DISPLAY
 // #define TEST_SAMPLEISR
-// #define TEST_COMMUNICATION_TASKS
+#define TEST_COMMUNICATION_TASKS
 
 
 
