@@ -78,8 +78,8 @@ _(add Figures/Videos later when revising...)_
 
     - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
     
-<video width="320" height="240" controls>
-    <source src="Videos/VideoTest.mp4" type="video/mp4">
+<video>
+    <source src="Videos/VideoTest.mp4">
 </video>
 
 &nbsp;  
