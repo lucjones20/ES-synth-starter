@@ -230,8 +230,9 @@ _//Description & Implementation/Thread/Interrupt_:
 ### 3.4. CAN_TX_Task
 _//Description & Implementation/Thread/Interrupt_: 
 
-- Theoretical Minimum Initiation Interval:
-- Measured Maximum Execution Time:
+- Theoretical Minimum Initiation Interval: 
+- Measured Maximum Execution Time: 384 microseconds
+- Interrupt : 167
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 &nbsp;  
@@ -239,7 +240,8 @@ _//Description & Implementation/Thread/Interrupt_:
 _//Description & Implementation/Thread/Interrupt_: 
 
 - Theoretical Minimum Initiation Interval:
-- Measured Maximum Execution Time:
+- Measured Maximum Execution Time: 992 microseconds
+- Interrupt: 320 micro
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 
