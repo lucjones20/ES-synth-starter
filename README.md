@@ -228,7 +228,7 @@ The scanKeyTask is the most versatile task, it handles keyArray reads and regest
 
 - Initiation Interval: 20 milliseconds - decreased from original 50 milliseconds in order for knobs to be read more accurately.
 - Measured Maximum Execution Time: 241 microseconds
-- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+- Critical instant analysis of the rate monotic scheduler: shown below
 
 > - Mention how we could increase the frequency, allowing for better reading of the knob states (they are not as well-functioning since the detents are not read as properly due to intermediate states...). Just acknowledge this consideration..
 
@@ -238,7 +238,7 @@ The DisplayUpdateTask's only responsibility is to update the screen based on the
 
 - Initiation Interval: 100 milliseconds
 - Measured Maximum Execution Time: 18604 microseconds
-- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+- Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
 ### 3.3. SampleISR
@@ -246,39 +246,39 @@ SampleISR is an interrupt that produces the desired vout for the audio output.
 
 - Initiation Interval: 45.45 microseconds
 - Measured Maximum Execution Time: 28.0  microseconds
-- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+- Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
 ### 3.4. CAN_TX_Task
 The CAN_TX_Task is responsible for initialising the send process of the CAN bus. It puts everything which is in the msgOut queue into the send buffer. 
 
-- Initiation Interval: 60 ms for 36 iterations
+- Initiation Interval: 60 milliseconds for 36 iterations
 - Measured Maximum Execution Time: 12 microseconds
-- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+- Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
 ### 3.5. CAN_RX_Task
 The CAN_RX_Task is responsible from interpeting the incoming messages and execute their action.
 
-- Initiation Interval: 25.2 ms for 36 iterations
+- Initiation Interval: 25.2 milliseconds for 36 iterations
 - Measured Maximum Execution Time: 82.7 microseconds
-- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+- Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
 ### 3.6. CAN_TX_ISR
 This interupt is called whenever a message is sent. The porpuse of this interrupt is to protect the send buffer from overflowing by decreasing the CAN_TX_Semaphore.
 
-- Initiation Interval:
+- Initiation Interval: 60 milliseconds for 36 iterations
 - Measured Maximum Execution Time: 5.2 microseconds
-- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+- Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
 ### 3.7. CAN_RX_ISR
 This interrupt is called whenever a message is recieved and copies it to from the CAN buffer to msgInQueue.
 
-- Theoretical Minimum Initiation Interval:
+- Initiation Interval: 25.2 milliseconds for 36 iterations
 - Measured Maximum Execution Time: 10 microseconds
-- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+- Critical instant analysis of the rate monotic scheduler: shown below
 
 &nbsp;  
 ## 4. Analysis
@@ -324,15 +324,15 @@ This interrupt is called whenever a message is recieved and copies it to from th
 &nbsp;  
 ### 4.4. CPU Utilisation - Rate Monotonic Scheduler Critical Instant Analysis
 | Task Name | Initiation Interval  ($τ_i$) | Execution Time  ($T_i$) | $[\frac{τ_n}{τ_i}]$ | CPU Utilisation $[\frac{T_i}{τ_i}]$ |
-| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
-| scanKeysTask | 20 ms | 0.241 ms | 5 | 0.355% |
+| ----------- | ----------- | ----------- | ----------- | ----------- |
+| scanKeysTask | 20 ms | 0.241 ms | 5 | 1.205% |
 | displayUpdateTask | 100 ms | 18.60 ms | 1 | 18.6% |
 | sampleISR | 0.045 ms | 0.028 ms | 22000 | 61.6% |
 | CAN_RX_Task (36 iterations)| 25.2 ms | 1.116 ms | 3.97 | 4.429% |
-| CAN_RX_ISR (36 iterations)| 0.512 ms | 0.360 ms | 195 | 1.10% |
+| CAN_RX_ISR (36 iterations)| 25.2 ms | 0.360 ms | 3.97 | 1.429% |
 | CAN_TX_Task (36 iterations)| 60 ms | 0.432 ms | 1.67 | 0.72% |
-| CAN_TX_ISR (36 iterations)| 0.512 ms | 0.187 ms | 195 | 0.592% |
-| Total | _ | _ | _ | 99.89% |
+| CAN_TX_ISR (36 iterations)| 60 ms | 0.187 ms | 1.67 | 0.312% |
+| Total | _ | _ | _ | 88.295% |
 
 
 &nbsp;  

@@ -20,12 +20,12 @@
 
 //Test switches:
 bool disable_blocks = false;
-#define DISABLE_THREADS
-#define DISABLE_INTERRUPT
+// #define DISABLE_THREADS
+// #define DISABLE_INTERRUPT
 // #define TEST_SCANKEYS
 // #define TEST_DISPLAY
 // #define TEST_SAMPLEISR
-#define TEST_COMMUNICATION_TASKS
+// #define TEST_COMMUNICATION_TASKS
 
 
 
@@ -122,38 +122,6 @@ bool nextAmplitude(volatile uint8_t* state,volatile uint8_t* amplitude){
   }
   return true;
 }
-/*
-bool nextAmplitude2(volatile uint8_t* state,volatile uint8_t* amplitude){
-  bool peaked;
-  switch (*state)
-  {
-    case 0b010:  //peaked|cBit|pBit
-      *state = 0b011;
-      return true;
-    case 0b011:
-      if(*amplitude > 64) {
-      peaked = true;
-      return false;
-      }
-      if(*amplitude < 64) *amplitude += 8;
-      else *state = 0b011;;
-      break;
-    case 0b111:
-      if(*amplitude <= 10 || *amplitude > 64) return false;
-      else if(*amplitude >= 48) *amplitude -= 2;
-      else *amplitude = 48;
-      break;
-    case 0b001:
-      if(*amplitude <= 10 || *amplitude > 64) return false;
-      else *amplitude -= (uint8_t) (*amplitude / (float) 6.67);
-      break;
-    default: 
-      *amplitude = 0;
-    break;
-  }
-  return true;
-}*/
-
 
 
 //Pre stored values for the notes
@@ -238,8 +206,6 @@ std::atomic<int> recordIndex;
 
 
 
-
-// std::vector<pianoADSR> keyADSR(12);
 //Display driver object
 U8G2_SSD1305_128X32_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
@@ -338,19 +304,19 @@ void sampleISR() {
           }
           Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
         }
-        // else if(waveformKnob->getCounter()==2){
-        //   if(phaseAccArray[it->first] + triangleCoeff[it->first] * 2 * it->second < phaseAccArray[it->first]){
-        //     triangleCoeff[it->first] = -1;
-        //   }
-        //   else{
-        //     triangleCoeff[it->first] = 1;
-        //   }
-        //   phaseAccArray[it->first] += triangleCoeff[it->first] * 2 * it->second;
+        else if(waveformKnob->getCounter()==2){
+          if(phaseAccArray[it->first] + triangleCoeff[it->first] * 2 * it->second < phaseAccArray[it->first]){
+            triangleCoeff[it->first] = -1;
+          }
+          else{
+            triangleCoeff[it->first] = 1;
+          }
+          phaseAccArray[it->first] += triangleCoeff[it->first] * 2 * it->second;
 
-        //   Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
-        // }
+          Vout += ((phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
+        }
 
-        else if(waveformKnob->getCounter()==2)  //Implementing Square Wave (WIP)
+        else if(waveformKnob->getCounter()==3)  //Implementing Square Wave (WIP)
         {
           
         phaseAccArray[it->first] += it->second;
@@ -364,8 +330,7 @@ void sampleISR() {
           Vout += 127*((float)amplitudeAmp[it->first]/(float)64); //HIGH
         }
 
-        // Vout += (phaseAccArray[it->first] >> 24))*((float)amplitudeAmp[it->first]/(float)64)-128;
-        // Vout *= ((float)amplitudeAmp[it->first]/(float)64)-128;    
+
 
         }
 
@@ -774,7 +739,7 @@ void setup() {
       uint32_t recieveISR = 0;
       TX_Message[1] = 4;
       TX_Message[2] = 12;
-      for(int i = 0; i < 32; i++)
+      for(int i = 0; i < 36; i++)
       {
         if(i%2 == 0)
           TX_Message[0] = 'P';
