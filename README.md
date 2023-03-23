@@ -322,7 +322,7 @@ This interrupt is called whenever a message is recieved and copies it to from th
 
 &nbsp;  
 ### 4.4. CPU Utilisation - Rate Monotonic Scheduler Critical Instant Analysis
-| Task Name | Initiation Interval  ($τ_i$) | Execution Time  ($T_i$) | $[\frac{τ_n}{τ_i}]$ | CPU Utilisation $[\frac{T_i}{τ_i}]$ |
+| Task Name | Initiation Interval  ($τ_i$) | Execution Time  ($T_i$) | $[\frac{maximum τ_i}{τ_i}]$ | CPU Utilisation $[\frac{T_i}{τ_i}]$ |
 | ----------- | ----------- | ----------- | ----------- | ----------- |
 | scanKeysTask | 20 ms | 0.241 ms | 5 | 1.205% |
 | displayUpdateTask | 100 ms | 18.60 ms | 1 | 18.6% |
@@ -333,6 +333,8 @@ This interrupt is called whenever a message is recieved and copies it to from th
 | CAN_TX_ISR (36 iterations)| 60 ms | 0.187 ms | 1.67 | 0.312% |
 | Total | _ | _ | _ | 88.295% |
 
+In this case maximum τ_i is 100ms for the displayUpdateTask
+
 As we can see, all deadlines are met, even under worst case conditions.
 The worst case would be if all tasks were under their worst conditions, shown above. 
 In a 100 milliseconds interval, this would only mean that the CPU is used for 88.295 milliseconds.
@@ -340,6 +342,7 @@ This totals for a 88.295% maximum CPU utilisation under worst case scenarios.
 This shows that even with all the tasks going on top of one another, under worst conditions the CPU is not maximally utilised.
 sampleISR accounts for 61.6% of the CPU utilisation alone, and the only other tasks or interrupts utilising a significant proportion(>2%) are displayUpdateTask and CAN_RX_Task.
 
+NOTE: Tx Task and Rx Task most of the time just check the internal queue and have nothing to send/ receive. So in theory every time they are run the CPU is not really utilised.
 
 &nbsp;  
 ## 5. References
