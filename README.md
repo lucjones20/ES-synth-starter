@@ -113,6 +113,10 @@ This project was completed by Electrical Engineering students from Imperial Coll
             <img src="Images/ADSRStateMachine.png"  width=75% height=75%>
         </p>
 
+    - >**DEMO VIDEO CLIP FOR ADSR (also showcasing Polyphony feature): **
+    - > 
+    - > [ADSR demo video (also showcasing Polyphony feature)](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/ETukwHkI3oRIr0NWmSd-kucBcjja7p5IqlWho3pAgnwl3w?e=NzFCTo)
+
 &nbsp;  
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
     - In addition to the core sawtooth waveform, sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
@@ -179,7 +183,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     
 
     - >**DEMO VIDEO CLIP FOR RECORDING & PLAYBACK: **
-    
+    - >
     - > [Recording & Playback demo video](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
 
     
