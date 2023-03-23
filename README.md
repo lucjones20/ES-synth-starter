@@ -64,7 +64,6 @@ This project was completed by Electrical Engineering students from Imperial Coll
 
 
 ### 2.2. Advanced Features 
-_(add Figures/Videos later when revising...)_
 
 &nbsp;  
 - a. Polyphony
@@ -79,7 +78,7 @@ _(add Figures/Videos later when revising...)_
     - >**[DEMO VIDEO CLIP FOR POLYPHONY]**
     
 
-<img width="50" src="https://user-images.githubusercontent.com/106097477/227254823-6cab3f5c-33e8-4aa6-98e1-51e935fd22e6.mp4" />
+    https://user-images.githubusercontent.com/106097477/227254823-6cab3f5c-33e8-4aa6-98e1-51e935fd22e6.mp4
 
 
 
@@ -111,30 +110,37 @@ _(add Figures/Videos later when revising...)_
 
 &nbsp;  
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
-    - In addition to the core sawtooth waveform, sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of Knob X.   
+    - In addition to the core sawtooth waveform, sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
 
     - Sine: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF SINE WAVE]**
     <p align = "center">
         <img src="Images/Sine.jpg">
     </p>
-    In order to play a sound wave, we cannot compute the sine in real time because it takes too long. The solution to this is to compute a set of discrete values for all of the sine waves of different frequencies and store those precomputed values into an array. To minimise the data needed we only store one period of each sine wave. To play all the octaves, we need to store 84 sine waves. Using the sampling frequency, we determined the minimum number of samples need for each octave: octave 1 needs 400 values and the number of values halves every octave. The number of samples per second (shown with delta, the time between 2 samples, which stays constant as the frequency changes) does not actually change between the octaves, but the time it takes for a period to complete shrinks as the frequency increases, allowing us to decrease the number of samples needed to accurately play a sine wave.
 
+    In order to play a sound wave, we cannot compute the sine values in real time since it takes too long (computational limitation). Our solution to this is to compute a set of discrete values for all of the sine waves of different frequencies and store those precomputed values into an array. To minimise the data needed, we only store one period of each sine wave. 
+    
+    To play all the octaves, we need to store 84 sine waves. Using the sampling frequency, we determined the minimum number of samples need for each octave: Octave 1 needs 400 values and the number of values halves every octave. 
+    
+    The number of samples per second (shown with $\Delta$, the time between 2 samples, which stays constant as the frequency changes) does not actually change between the octaves, but the time it takes for a period to complete shrinks as the frequency increases, allowing us to decrease the number of samples needed to accurately play a sine wave.
+
+    &nbsp;  
     - Triangle:
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
     <p align = "center">
         <img src="Images/triangle.jpeg">
     </p>
 
-    The triangle waveform is similar to the sawtooth in that it increases and decreases by a fixed stepsize. The step size for the triangle wave is twice the frequency of the sawtooth wave because in the time the sawtooth increases, the triangle has to increase then decrease .Hence the step size needs to be double so that the value of the signal is 0 at the correct time.
+    The triangle waveform is similar to the sawtooth in that it increases and decreases by a fixed stepsize. The step size for the triangle wave is twice the frequency of the sawtooth wave since, in the time the sawtooth increases, the triangle has to increase then decrease. Hence, the step size needs to be double so that the value of the signal is 0 at the correct time.
 
+    &nbsp;
     - Square: 
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE AND PERIOD OF SQUARE WAVE]**
     <p align = "center">
         <img src = "Images/square.jpeg">
     </p>
 
-    The square wave is a very basic waveform which is either high or low. The way it was implemented is that when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
+    The square wave is a relatively basic waveform which is either high or low. Its implementation follows such that, when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
 
 
     &nbsp;  
@@ -151,19 +157,19 @@ _(add Figures/Videos later when revising...)_
         | Violin | 10 | 8 | 10 | 9 | Square |
         | Cello | 0 | 9 | 0 | 0 | Square |
     
-    - The most basic sound, the sound of a piano, uses the default sawtooth waveform and inherently has no Attack/Sustain phase, as in a piano, there is no audible sound made when the key is first pressed and the hammer inside the piano is in motion to strike the string below. There is no Sustain phase as even if the hammer is held against the string it will stop the sound from decaying. Therefore, the core specification is still satisfied since there is no perceptible delay between initially pressing the key and the volume reaching maximum.
+    - The most basic sound, the sound of a piano, uses the default sawtooth waveform and inherently has no Attack/Sustain phase, as in a piano, there is no audible sound made when the key is first pressed and the hammer inside the piano is in motion to strike the string below. There is no Sustain phase as, even if the hammer is held against the string, it will stop the sound from decaying. Therefore, the core specification is still satisfied since there is no perceptible delay between initially pressing the key and the volume reaching maximum.
     
 
 
 &nbsp;  
 - f. Recording & Playback
-    - A record feature has been implemented, to help the user make more complex plays. The record & playback feature provides the user with ability to record every keystroke supporting multiple tracks (can record multiple tracks) and can later play them back while having the ability to play on top of it. 
+    - A record feature has been implemented, to help the user make more complex plays. The record & playback feature provides the user with ability to record every keystroke supporting multiple tracks (can record multiple tracks) and can later play them back, while having the ability to play on top of it. 
 
     &nbsp; 
-    - Recording: The records are stored in a Recording struct, which logs the key presses and releases and the interval between them. It records both incoming messages and outgoing messages and basically stores said messages. Each record structure is stored as a pointer in a std::vector which allows for multiple tracks to be stored. 
+    - **Recording:** The records are stored in a Recording struct, which logs the key presses and releases and the interval between them. It records both incoming messages and outgoing messages and stores those messages. Each record structure is stored as a pointer in a std::vector which allows for multiple tracks to be stored. 
 
     &nbsp;  
-    - Playback: The recorded keys are played back using the currently selected waveform on the keyboard. It works the same way as if extra incoming messages from other boards would be interpreted onto the board, thus allowing extra keypresses to be played on top of it. As a result, one can produce complex plays which usually would require multiple people. 
+    - **Playback:** The recorded keys are played back using the currently selected waveform on the keyboard. It works the same way as if extra incoming messages from other boards would be interpreted onto the board, thus allowing extra keypresses to be played on top of it. As a result, one can produce complex plays which would otherwise require multiple people. 
     
     
 
@@ -186,70 +192,88 @@ _(add Figures/Videos later when revising...)_
     - >**[PICTURE OF STATE MACHINE OF THE MENU...]**
 
     &nbsp;
-    - Record & Playback controls: For the contols it uses knob presses in the following way: Knob0 - Start, Knob1-Cancel, Knob2-Stop/Decrease, Knob3-Increase. Firstly one must select the RecordOff mode, then by pressing start it will capture the inputs. One can pause it using the stop button or can finalise it and save it with the cancel button. After at least one recording has been recording PlaybackOff will be available for choosing. The user can select which track he wants to play with the decrease/increase buttons and can start the playback with the start button. The playback can be stoped at any moment with the cancel button and then can be resumed with the press of the start button again.
+    - **Record & Playback controls:** The Record and Playback states are controlled using Knob presses in the following way: 
+    
+        - Knob0 - Start
+        - Knob1 - Cancel
+        - Knob2 - Stop/Decrease
+        - Knob3 - Increase.  
+    
+    &nbsp;  
+    Firstly, the user must select the RecordOff mode then, by pressing start, it will capture the inputs. One can pause the recording using the stop button or finalise and save it with the cancel button. 
+    
+    After at least one recording has been saved/stored, PlaybackOff will be available for choosing. The user can select which track is played with the decrease/increase buttons and can start the playback with the start button. 
+    
+    The playback can be stoped at any moment with the cancel button and can then be resumed with the press of the start button again.
 
     &nbsp;  
-    - _(Does the menu display any information regarding whether there are other keyboard modules connected? e.g. East/West...)_
+
 
     - >**[DEMO VIDEO CLIP OF NAVIGATION OF MENU]**
 
-&nbsp;  
-&nbsp;  
->* _(*Not implemented/Not implemented yet)_
->- _*Joystick_
->    - *...
->- _*Stero sound with multiple boards' speakers_
->    - *...
+
 
 &nbsp;  
-## 3. Tasks
+## 3. Tasks and Interrupts
 >* _(For each task, include: method of implementation, thread or interrupt + theoretical minimum initiation interval and measured maximum execution time + a critical instant analysis of the rate monotonic scheduler, showing that all deadlines are met under worst-case conditions)_
 
 &nbsp;  
 ### 3.1. ScanKeyTask
-_//Description & Implementation/Thread/Interrupt_: The ScanKeyTask function is responsible for reading the key matrix...
+The scanKeyTask is the most versatile task, it handles keyArray reads and regestering them into the desired paramaters spaces(Knobs, Menu, etc...). It also generates messages for the CAN task and inputs for the sampleISR() sound generator. ADSR stepping happens here as well because we can affor more costly calculations here.
 
-- Theoretical Minimum Initiation Interval:
-- Measured Maximum Execution Time:
+- Initiation Interval: 20 milliseconds - decreased from original 50 milliseconds in order for knobs to be read more accurately.
+- Measured Maximum Execution Time: 241 microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 > - Mention how we could increase the frequency, allowing for better reading of the knob states (they are not as well-functioning since the detents are not read as properly due to intermediate states...). Just acknowledge this consideration..
 
 &nbsp;  
 ### 3.2. DisplayUpdateTask
-_//Description & Implementation/Thread/Interrupt_: 
+The DisplayUpdateTask's only responsibility is to update the screen based on the initial parameters. 
 
-- Theoretical Minimum Initiation Interval:
-- Measured Maximum Execution Time:
+- Initiation Interval: 100 milliseconds
+- Measured Maximum Execution Time: 18604 microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 &nbsp;  
 ### 3.3. SampleISR
-_//Description & Implementation/Thread/Interrupt_: 
+SampleISR is an interrupt that produces the desired vout for the audio output.
 
-- Theoretical Minimum Initiation Interval:
-- Measured Maximum Execution Time:
+- Initiation Interval: 4.5 microseconds
+- Measured Maximum Execution Time: 28.0 microseconds microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 &nbsp;  
 ### 3.4. CAN_TX_Task
-_//Description & Implementation/Thread/Interrupt_: 
+The CAN_TX_Task is responsible for initialising the send process of the CAN bus. It puts everything which is in the msgOut queue into the send buffer. 
 
-- Theoretical Minimum Initiation Interval: 
-- Measured Maximum Execution Time: 384 microseconds
-- Interrupt : 167
+- Initiation Interval: 60 ms
+- Measured Maximum Execution Time: 12 microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 &nbsp;  
 ### 3.5. CAN_RX_Task
-_//Description & Implementation/Thread/Interrupt_: 
+The CAN_RX_Task is responsible from interpeting the incoming messages and execute their action.
 
-- Theoretical Minimum Initiation Interval:
-- Measured Maximum Execution Time: 992 microseconds
-- Interrupt: 320 micro
+- Initiation Interval: 
+- Measured Maximum Execution Time: 82.7 microseconds
 - Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
+&nbsp;  
+### 3.6. CAN_TX_ISR
+This interupt is called whenever a message is sent. The porpuse of this interrupt is to protect the send buffer from overflowing by decreasing the CAN_TX_Semaphore.
 
+- Initiation Interval:
+- Measured Maximum Execution Time: 5.2 microseconds
+- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
+
+&nbsp;  
+### 3.7. CAN_RX_ISR
+This interrupt is called whenever a message is recieved and copies it to from the CAN buffer to msgInQueue.
+
+- Theoretical Minimum Initiation Interval:
+- Measured Maximum Execution Time: 10 microseconds
+- Critical instant analysis of the rate monotic scheduler: _(showing that all deadlines are met under worst-case conditions)_
 
 &nbsp;  
 ## 4. Analysis
@@ -266,7 +290,7 @@ _//Description & Implementation/Thread/Interrupt_:
 * amplitudeAmp, amplitudeState, currentStepMap: used by recieveTask, scanKeyTask and sampleISR interrupt. It was a bit more challanging to protect this but achieved thread safety by using an atomic bool and compare swaps. It has two different usege:
     * One with an if(compare and swap) which tries to acces it, if it is not available it just skips it.
     * One with a while(compare and swap) which blocks the thread until available -> important for message recieves 
-* queue for outgoing message and incomming message: protected by CAN_TX_Semaphore as detailed in the lab tutorials
+* queue for outgoing message and incomming message, which are memory safe by definition
 * Knob and menu parameters: many parameters from these classes can be accessed from multiple threads at any time ensured by using atomic variables with atomic operations.
  
 &nbsp;
@@ -277,15 +301,23 @@ _//Description & Implementation/Thread/Interrupt_:
 &nbsp;
 ### 4.3. Timing Analysis  
 
-* ScanKeyTask: 8430 / 32 = 263 $\mu s$ 
+* ScanKeyTask: 7710 / 32 = 241 $\mu s$ 
 
-* displayUpdateTask: 554261 / 32 = 17 320 $\mu s$ 
+* displayUpdateTask: 595337 / 32 = 18 604 $\mu s$ 
 
-* sampleISR: 689 / 32 = 21.5 $\mu s$  
+* sampleISR: 895 / 32 = 28.0 $\mu s$  
 
-### 4.4. CPU Utilisation
+* CAN_TX_Task: 384 / 32 = 12 $\mu s$  
 
-## Rate Monotonic Scheduler Critical Instant Analysis
+* CAN_RX_Task: 992 / 32 = 82.7 $\mu s$  
+
+* CAN_TX_ISR: 167 / 32 = 5.2 $\mu s$  
+
+* CAN_RX_ISR: 320 / 32 = 10 $\mu s$  
+
+
+&nbsp;  
+### 4.4. CPU Utilisation - Rate Monotonic Scheduler Critical Instant Analysis
 | Task Name | Initiation Interval ($τ_i$) | Execution Time ($T_i$) | $[\frac{τ_n}{τ_i}]$ | $[\frac{τ_n}{τ_i}]T_i$| CPU Utilisation $[\frac{T_i}{τ_i}]$ |
 | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
 | scanKeysTask | 25 ms | 0.263 ms | 4 | 0.355 ms | 0.355% |

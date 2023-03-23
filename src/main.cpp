@@ -20,11 +20,12 @@
 
 //Test switches:
 bool disable_blocks = false;
-//#define DISABLE_THREADS
-//#define DISABLE_INTERRUPT
-//#define TEST_SCANKEYS
+// #define DISABLE_THREADS
+// #define DISABLE_INTERRUPT
+// #define TEST_SCANKEYS
 // #define TEST_DISPLAY
 // #define TEST_SAMPLEISR
+// #define TEST_COMMUNICATION_TASKS
 
 
 
@@ -99,7 +100,7 @@ QueueHandle_t msgOutQ;
 QueueHandle_t msgInQ;
 
 //Enviroment control variables
-bool isMultiple = true;
+bool isMultiple = false;
 bool isReciever = false;
 
 //ADSR State machine
@@ -424,7 +425,7 @@ uint8_t readCols(){
 
 void scanKeysTask(void * pvParameters) {
     //Init of task
-    const TickType_t xFrequency = 25/portTICK_PERIOD_MS;
+    const TickType_t xFrequency = 20/portTICK_PERIOD_MS;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint8_t prevKeyArray[3] = {0xF, 0xF, 0xF};
     uint8_t analysisCounter = 1;
@@ -614,13 +615,22 @@ void CAN_RX_Task(void* pvParameters){
   }while(!disable_blocks);
 }
 void CAN_TX_ISR (void) {
+  #ifdef DISABLE_INTERRUPT
+  xSemaphoreGive(CAN_TX_Semaphore);
+  #else
 	xSemaphoreGiveFromISR(CAN_TX_Semaphore, NULL);
+  #endif
+
 }
 void CAN_RX_ISR (void) {
 	uint8_t RX_Message_ISR[8];
 	uint32_t ID;
 	CAN_RX(ID, RX_Message_ISR);
+  #ifndef DISABLE_INTERRUPT
 	xQueueSendFromISR(msgInQ, RX_Message_ISR, NULL);
+  #else
+	xQueueSend(msgInQ, RX_Message_ISR, 0);
+  #endif
 }
 
 void setup() {
@@ -641,8 +651,7 @@ void setup() {
     #endif
     msgInQ = xQueueCreate(36,8);
 
-    CAN_RegisterTX_ISR(CAN_TX_ISR);
-    CAN_RegisterRX_ISR(CAN_RX_ISR);
+
     volumeKnob = new Knob(0,8,5);
     octaveKnob = new Knob(0,8,4);
     menuKnob = new Knob(0, 3, 0);
@@ -683,6 +692,8 @@ void setup() {
     sampleTimer->setOverflow(22000, HERTZ_FORMAT);
     sampleTimer->attachInterrupt(sampleISR);
     sampleTimer->resume();
+    CAN_RegisterTX_ISR(CAN_TX_ISR);
+    CAN_RegisterRX_ISR(CAN_RX_ISR);
     #endif
     
     //Initialise UART
@@ -737,7 +748,9 @@ void setup() {
         while(1);
       #endif
       #ifdef TEST_DISPLAY
+        scanKeysTask(NULL);
         uint32_t startTime = micros();
+
         for (int iter = 0; iter < 32; iter++) {
           displayUpdateTask(NULL);
         }
@@ -757,11 +770,40 @@ void setup() {
       #ifdef TEST_COMMUNICATION_TASKS
       uint32_t sendTimer = 0;
       uint32_t recievTimer = 0;
+      uint32_t sendISR = 0;
+      uint32_t recieveISR = 0;
+      TX_Message[1] = 4;
+      TX_Message[2] = 12;
       for(int i = 0; i < 32; i++)
       {
-        auto startTime = micros();
+        if(i%2 == 0)
+          TX_Message[0] = 'P';
+        else
+          TX_Message[0] = 'R';
         
+        xQueueSend(msgOutQ, TX_Message, portMAX_DELAY);
+        auto startTime = micros();
+        CAN_TX_Task(NULL);
+        sendTimer += micros() - startTime;
+        startTime = micros();
+        CAN_TX_ISR();
+        sendISR += micros() - startTime;
+        delay(100);
+        startTime = micros();
+        CAN_RX_ISR();
+        recieveISR +=  micros() - startTime;
+        startTime = micros();
+        CAN_RX_Task(NULL);
+        recievTimer +=  micros() - startTime;
       }
+      Serial.print("Send Task:");
+      Serial.println(sendTimer);
+      Serial.print("Send Interrupt:");
+      Serial.println(sendISR);
+      Serial.print("Recieve Task:");
+      Serial.println(recievTimer);
+      Serial.print("Recieve ISR:");
+      Serial.println(recieveISR);
       #endif
 }
 
