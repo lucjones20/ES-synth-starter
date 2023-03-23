@@ -119,9 +119,21 @@ This project was completed by Electrical Engineering students from Imperial Coll
 - d. Additional Waveforms (Sine, Triangle, Sqaure)
     - In addition to the core [sawtooth waveform](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EeyMw0rTvfZIuIy_lxkftt0Bu_llnUUaBiwqy3r2RT3Wig?e=9WmgLa), sine, triangle and square waveforms were implemented. The waveform can be selected and toggled/cycled through the use of a knob.
 
+    - **Square**: 
+    &nbsp;  
+    >- **[Graph for the Square waveform implementation:]**
+    <p align = "center">
+        <img src = "Images/square.jpeg" width=70% height=70%>
+    </p>
+
+    The square wave is a relatively basic waveform which is either high or low. Its implementation follows such that, when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
+
+    >- [_Square waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EcvFZQimqjRNprf7M6wle_4BT5R5pCE-dawbKat3s-zAzA?e=loTrqI)
+
+
     - **Sine**: 
     &nbsp;  
-    >- **[Graph of Vout vs. Phase for the Sine waveform implementation:]**
+    >- **[Graph for the Sine waveform implementation:]**
     <p align = "center">
         <img src="Images/Sine.jpg" width=70% height=55%>
     </p>
@@ -137,7 +149,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     &nbsp;  
     - **Triangle**:
     &nbsp;  
-    >- **[Graph of Vout vs. Phase for the Triangle waveform implementation:]**
+    >- **[Graph for the Triangle waveform implementation:]**
     <p align = "center">
         <img src="Images/triangle.jpeg" width=70% height=70%>
     </p>
@@ -147,16 +159,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     >- [_Triangle waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EcUlaaVXOTtLtEZLXyxDSIgBER9yQimpYfB7LkD3PvkGYQ?e=vmgP2H)
 
     &nbsp;
-    - **Square**: 
-    &nbsp;  
-    >- **[Graph of Vout vs. Phase for the Square waveform implementation:]**
-    <p align = "center">
-        <img src = "Images/square.jpeg" width=70% height=70%>
-    </p>
 
-    The square wave is a relatively basic waveform which is either high or low. Its implementation follows such that, when phaseAcc is smaller than half of the max int, Vout is set to 0 and when phaseAcc is higher than half the max int, Vout is set to 127.
-
-    >- [_Square waveform demo video clip_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EcvFZQimqjRNprf7M6wle_4BT5R5pCE-dawbKat3s-zAzA?e=loTrqI)
 
 
 &nbsp;  
