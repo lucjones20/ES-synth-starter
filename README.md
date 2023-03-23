@@ -70,7 +70,7 @@ _(add Figures/Videos later when revising...)_
 - a. Polyphony
     - With the default/base implementation of phaseAcc and currentStepSize, only one note was able to be played at any given time and if multiple notes were played at the same time, the right-most note would be played.
 
-    - By changing the phaseAcc variable to a uint32_t array, phaseAccArray, all currently pressed keys are accounted for. phaseAccArray has size 96 since there are 12 keys per octave and 8 octaves.
+    - By changing the phaseAcc variable to a uint32_t array, phaseAccArray, all currently pressed keys are accounted for. phaseAccArray has size 96 accounting for 8 octaves of 12 keys.
 
     - Vout is the total sum corresponding to each of the pressed keys and the resulting sound achieves polyphony.
 
@@ -118,7 +118,7 @@ _(add Figures/Videos later when revising...)_
     - Triangle:
     >- **[GRAPH OF VOUT VS PHASE SHOWING RANGE, PERIOD AND RESOLUTION OF TRIANGLE WAVE]**
     <p align = "center">
-        <img src="Images/tringale.jpeg">
+        <img src="Images/triangle.jpeg">
     </p>
 
     The triangle waveform is similar to the sawtooth in that it increases and decreases by a fixed stepsize. The step size for the triangle wave is twice the frequency of the sawtooth wave because in the time the sawtooth increases, the triangle has to increase then decrease .Hence the step size needs to be double so that the value of the signal is 0 at the correct time.
