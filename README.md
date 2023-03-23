@@ -173,6 +173,9 @@ This project was completed by Electrical Engineering students from Imperial Coll
 &nbsp;  
 - f. Recording & Playback
     - A record feature has been implemented, to help the user make more complex plays. The record & playback feature provides the user with ability to record every keystroke supporting multiple tracks (can record multiple tracks) and can later play them back, while having the ability to play on top of it. 
+    &nbsp; 
+
+    - > [_Recording & Playback demo video_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
 
     &nbsp; 
     - **Recording:** The records are stored in a Recording struct, which logs the key presses and releases and the interval between them. It records both incoming messages and outgoing messages and stores those messages. Each record structure is stored as a pointer in a std::vector which allows for multiple tracks to be stored. 
@@ -184,7 +187,7 @@ This project was completed by Electrical Engineering students from Imperial Coll
     
 
     
-    - > [_Recording & Playback demo video_](https://imperiallondon-my.sharepoint.com/:v:/g/personal/bcb20_ic_ac_uk/EdL70dZ9pDdBqh5EDsGiq2YBdb9YL40om-PbNWR_c8yMHA?e=MamiPO)
+
 
  
 
